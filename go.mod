@@ -3,9 +3,11 @@ module github.com/HavvokLab/true-solar
 go 1.22.0
 
 require (
+	github.com/go-co-op/gocron v1.37.0
 	github.com/imroc/req/v3 v3.46.0
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/rs/zerolog v1.33.0
+	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/viper v1.19.0
 	go.openly.dev/pointy v1.3.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -19,6 +21,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20240910150728-a0b0bb1d4134 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -38,9 +41,9 @@ require (
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.47.0 // indirect
 	github.com/refraction-networking/utls v1.6.7 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
