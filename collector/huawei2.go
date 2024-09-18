@@ -658,7 +658,7 @@ func (h *Huawei2Collector) Collect(credential *model.HuaweiCredential, now time.
 			MonthlyProduction: &monthlyProduction,
 			YearlyProduction:  &yearlyPower,
 			PlantStatus:       &plantStatus,
-			Owner:             model.OwnerAltervim,
+			Owner:             credential.Owner,
 			TotalProduction:   &totalProduction,
 		}
 
