@@ -23,7 +23,7 @@
 
 # Go workspace file
 go.work
-
+*.xlsx
 logs/
 .vscode/
 config.yaml

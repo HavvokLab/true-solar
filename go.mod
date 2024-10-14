@@ -3,6 +3,7 @@ module github.com/HavvokLab/true-solar
 go 1.22.0
 
 require (
+	dario.cat/mergo v1.0.1
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2
 	github.com/go-co-op/gocron v1.37.0
 	github.com/imroc/req/v3 v3.46.0

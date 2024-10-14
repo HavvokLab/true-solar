@@ -7,7 +7,6 @@ import (
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
-	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog/log"
 	"github.com/sourcegraph/conc"
 )
@@ -19,10 +18,11 @@ func init() {
 }
 
 func main() {
-	cron := gocron.NewScheduler(time.Local)
-	cron.Cron("*/16 7-19 * * *").Do(collect)
-	cron.Cron("1 1-6 * * *").Do(collect)
-	cron.StartBlocking()
+	// cron := gocron.NewScheduler(time.Local)
+	// cron.Cron("*/16 7-19 * * *").Do(collect)
+	// cron.Cron("1 1-6 * * *").Do(collect)
+	// cron.StartBlocking()
+	collect()
 }
 
 func collect() {
@@ -37,7 +37,7 @@ func collect() {
 		cred := credential
 		wg.Go(func() {
 			serv := collector.NewKstarCollector(
-				repo.NewSolarRepo(infra.ElasticClient),
+				repo.NewSolarMockRepo(),
 				repo.NewSiteRegionMappingRepo(infra.GormDB),
 			)
 

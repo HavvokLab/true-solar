@@ -1,38 +1,19 @@
 package main
 
 import (
-	"github.com/HavvokLab/true-solar/collector"
-	"github.com/HavvokLab/true-solar/infra"
-	"github.com/HavvokLab/true-solar/repo"
+	"github.com/HavvokLab/true-solar/api/growatt"
+	"github.com/HavvokLab/true-solar/pkg/util"
 	"github.com/rs/zerolog/log"
-	"github.com/sourcegraph/conc"
 )
 
 func main() {
-	collect()
-}
-
-func collect() {
-	credRepo := repo.NewKStarCredentialRepo(infra.GormDB)
-	credentials, err := credRepo.FindAll()
+	client := growatt.NewGrowattClient("Trueupc1", "33bfe28df3f24cd42a8de64de0e7036e")
+	plants, err := client.GetPlantDeviceList(2027820)
 	if err != nil {
-		log.Panic().Err(err).Msg("error find all credentials")
+		log.Panic().Err(err).Msg("error get plant list")
 	}
 
-	wg := conc.NewWaitGroup()
-	for _, credential := range credentials {
-		cred := credential
-		wg.Go(func() {
-			serv := collector.NewKstarCollector(
-				repo.NewSolarMockRepo(),
-				repo.NewSiteRegionMappingRepo(infra.GormDB),
-			)
-
-			serv.Execute(&cred)
-		})
-	}
-
-	if r := wg.WaitAndRecover(); r != nil {
-		log.Panic().Any("recover", r.Value).Msg("error wait group")
-	}
+	util.PrintJSON(map[string]any{
+		"plants": plants,
+	})
 }

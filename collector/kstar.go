@@ -197,7 +197,7 @@ func (k *KstarCollector) Collect(
 					Str("device_id", deviceId).
 					Msg("KstarCollector::Collect() - failed to get realtime alarm list of device")
 				errCh <- err
-				return
+				continue
 			}
 
 			var deviceStatus *int = device.Status
