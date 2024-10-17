@@ -100,7 +100,6 @@ func searchDocument(ctx context.Context, elasticClient *elastic.Client, doc *Doc
 }
 
 func deleteDocument(ctx context.Context, elasticClient *elastic.Client, doc *Document) error {
-	return nil
 	query := elastic.NewBoolQuery().Must(
 		elastic.NewTermQuery("name.keyword", doc.Name),
 		elastic.NewRangeQuery("monthly_production").Gte(doc.Monthly),
