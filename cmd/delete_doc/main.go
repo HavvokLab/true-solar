@@ -64,7 +64,7 @@ func loadDocument() ([]Document, error) {
 	return docs, nil
 }
 
-func searchDocument(elasticClient *elastic.Client, doc *Document) error {
+func searchDocument(ctx context.Context, elasticClient *elastic.Client, doc *Document) error {
 	query := elastic.NewBoolQuery().Must(
 		elastic.NewTermQuery("name.keyword", doc.Name),
 		elastic.NewRangeQuery("monthly_production").Gte(doc.Monthly),
@@ -76,7 +76,12 @@ func searchDocument(elasticClient *elastic.Client, doc *Document) error {
 	}
 
 	index := fmt.Sprintf("solarcell-%v.*", date.Format("2006.01"))
-	searchResult, err := elasticClient.Search().Index(index).Query(query).Do(context.Background())
+	searchResult, err := elasticClient.Search().
+		Index(index).
+		Query(query).
+		Size(10).
+		Sort("@timestamp", false).
+		Do(ctx)
 	if err != nil {
 		docLog.Error().
 			Str("date", date.Format("2006-01")).
@@ -94,7 +99,29 @@ func searchDocument(elasticClient *elastic.Client, doc *Document) error {
 	return nil
 }
 
-func deleteDocument(elasticClient *elastic.Client, doc *Document) error {
+func deleteDocument(ctx context.Context, elasticClient *elastic.Client, doc *Document) error {
+	return nil
+	query := elastic.NewBoolQuery().Must(
+		elastic.NewTermQuery("name.keyword", doc.Name),
+		elastic.NewRangeQuery("monthly_production").Gte(doc.Monthly),
+	)
+
+	date, err := doc.Date()
+	if err != nil {
+		return err
+	}
+
+	index := fmt.Sprintf("solarcell-%v.*", date.Format("2006.01"))
+	result, err := elasticClient.DeleteByQuery(index).Query(query).Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Info().
+		Str("date", date.Format("2006-01")).
+		Str("name", doc.Name).
+		Any("result", result).
+		Msg("deleted document")
 	return nil
 }
 
@@ -104,6 +131,7 @@ func main() {
 		log.Panic().Err(err).Msg("error load document")
 	}
 
+	ctx := context.Background()
 	elasticClient, err := infra.NewElasticClient()
 	if err != nil {
 		log.Panic().Err(err).Msg("error create elastic client")
@@ -111,19 +139,18 @@ func main() {
 
 	deleteDocs := make([]Document, 0)
 	for _, doc := range docs {
-		if err := searchDocument(elasticClient, &doc); err != nil {
+		if err := searchDocument(ctx, elasticClient, &doc); err != nil {
 			continue
 		}
 
 		deleteDocs = append(deleteDocs, doc)
 	}
 
-	fmt.Println(len(deleteDocs))
-	// total := len(docs)
-	// for i, doc := range docs {
-	// 	count := fmt.Sprintf("%d/%d", i, total)
-	// 	if err := deleteDocument(elasticClient, &doc); err != nil {
-	// 		log.Error().Err(err).Str("count", count).Msg("error delete document")
-	// 	}
-	// }
+	total := len(docs)
+	for i, doc := range deleteDocs {
+		count := fmt.Sprintf("%d/%d", i, total)
+		if err := deleteDocument(ctx, elasticClient, &doc); err != nil {
+			log.Error().Err(err).Str("count", count).Msg("error delete document")
+		}
+	}
 }
