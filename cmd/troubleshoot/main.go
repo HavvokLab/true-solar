@@ -23,6 +23,8 @@ func main() {
 	switch strings.ToLower(vendor) {
 	case model.VendorTypeGrowatt:
 		collectGrowatt(start, end)
+	case model.VendorTypeInvt:
+		collectSolarman(start, end)
 	default:
 		log.Panic().Msgf("vendor %s not supported", vendor)
 	}
@@ -37,6 +39,24 @@ func collectGrowatt(start, end time.Time) {
 
 	for _, credential := range credentials {
 		serv := troubleshoot.NewGrowattTroubleshoot(
+			repo.NewSolarRepo(infra.ElasticClient),
+			repo.NewSiteRegionMappingRepo(infra.GormDB),
+		)
+
+		serv.ExecuteByRange(&credential, start, end)
+		break
+	}
+}
+
+func collectSolarman(start, end time.Time) {
+	credRepo := repo.NewSolarmanCredentialRepo(infra.GormDB)
+	credentials, err := credRepo.FindAll()
+	if err != nil {
+		log.Panic().Err(err).Msg("error find all credentials")
+	}
+
+	for _, credential := range credentials {
+		serv := troubleshoot.NewSolarmanTroubleshoot(
 			repo.NewSolarRepo(infra.ElasticClient),
 			repo.NewSiteRegionMappingRepo(infra.GormDB),
 		)
