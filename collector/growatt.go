@@ -129,18 +129,18 @@ DONE:
 		}
 	}
 
-	// collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, time.Now().Format("2006.01.02"))
-	// if err := g.solarRepo.BulkIndex(collectorIndex, documents); err != nil {
-	// 	g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to bulk index documents")
-	// 	return
-	// }
-	// g.logger.Info().Int("count", len(documents)).Msg("GrowattCollector::Execute() - bulk index documents success")
+	collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, time.Now().Format("2006.01.02"))
+	if err := g.solarRepo.BulkIndex(collectorIndex, documents); err != nil {
+		g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to bulk index documents")
+		return
+	}
+	g.logger.Info().Int("count", len(documents)).Msg("GrowattCollector::Execute() - bulk index documents success")
 
-	// if err := g.solarRepo.UpsertSiteStation(siteDocuments); err != nil {
-	// 	g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to upsert site station")
-	// 	return
-	// }
-	// g.logger.Info().Int("count", len(siteDocuments)).Msg("GrowattCollector::Execute() - upsert site station success")
+	if err := g.solarRepo.UpsertSiteStation(siteDocuments); err != nil {
+		g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to upsert site station")
+		return
+	}
+	g.logger.Info().Int("count", len(siteDocuments)).Msg("GrowattCollector::Execute() - upsert site station success")
 
 	g.logger.Info().Msg("GrowattCollector::Execute() - all goroutines finished")
 	close(documentCh)
