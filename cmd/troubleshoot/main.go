@@ -9,7 +9,12 @@ import (
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
 	"github.com/HavvokLab/true-solar/troubleshoot"
+	"github.com/gammazero/workerpool"
 	"github.com/rs/zerolog/log"
+)
+
+var (
+	WorkerPoolSize = 5
 )
 
 func init() {
@@ -37,15 +42,19 @@ func collectGrowatt(start, end time.Time) {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
 
+	pool := workerpool.New(WorkerPoolSize)
 	for _, credential := range credentials {
 		serv := troubleshoot.NewGrowattTroubleshoot(
 			repo.NewSolarRepo(infra.ElasticClient),
 			repo.NewSiteRegionMappingRepo(infra.GormDB),
 		)
 
-		serv.ExecuteByRange(&credential, start, end)
-		break
+		clone := credential
+		pool.Submit(func() {
+			serv.ExecuteByRange(&clone, start, end)
+		})
 	}
+	pool.StopWait()
 }
 
 func collectSolarman(start, end time.Time) {
@@ -55,13 +64,17 @@ func collectSolarman(start, end time.Time) {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
 
+	pool := workerpool.New(WorkerPoolSize)
 	for _, credential := range credentials {
 		serv := troubleshoot.NewSolarmanTroubleshoot(
 			repo.NewSolarRepo(infra.ElasticClient),
 			repo.NewSiteRegionMappingRepo(infra.GormDB),
 		)
 
-		serv.ExecuteByRange(&credential, start, end)
-		break
+		clone := credential
+		pool.Submit(func() {
+			serv.ExecuteByRange(&clone, start, end)
+		})
 	}
+	pool.StopWait()
 }

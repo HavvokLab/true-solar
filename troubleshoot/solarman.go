@@ -64,7 +64,7 @@ func (s *SolarmanTroubleshoot) Execute(
 	documentCh := make(chan interface{})
 	errorCh := make(chan error)
 	doneCh := make(chan bool)
-	go s.collectByDate(credential, date, documentCh, errorCh, doneCh)
+	go s.collectByDate(credential, date.UTC(), documentCh, errorCh, doneCh)
 
 DONE:
 	for {

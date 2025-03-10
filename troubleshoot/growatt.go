@@ -63,7 +63,7 @@ func (g *GrowattTroubleshoot) Execute(
 	documentCh := make(chan interface{})
 	errorCh := make(chan error)
 	doneCh := make(chan bool)
-	go g.collectByDate(credential, date, documentCh, errorCh, doneCh)
+	go g.collectByDate(credential, date.UTC(), documentCh, errorCh, doneCh)
 
 DONE:
 	for {
