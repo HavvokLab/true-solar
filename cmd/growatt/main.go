@@ -12,10 +12,8 @@ import (
 	"github.com/sourcegraph/conc"
 )
 
-const SUPPORTED_VERSION = 2
-
 func init() {
-	logger.Init("huawei2.log")
+	logger.Init("growatt.log")
 	loc, _ := time.LoadLocation("Asia/Bangkok")
 	time.Local = loc
 }
@@ -28,26 +26,23 @@ func main() {
 }
 
 func collect() {
-	credRepo := repo.NewHuaweiCredentialRepo(infra.GormDB)
+	credRepo := repo.NewGrowattCredentialRepo(infra.GormDB)
 	credentials, err := credRepo.FindAll()
 	if err != nil {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
 
 	wg := conc.NewWaitGroup()
+	now := time.Now()
 	for _, credential := range credentials {
 		cred := credential
-		if cred.Version != SUPPORTED_VERSION {
-			continue
-		}
-
 		wg.Go(func() {
-			serv := collector.NewHuawei2Collector(
+			serv := collector.NewGrowattCollector(
 				repo.NewSolarRepo(infra.ElasticClient),
 				repo.NewSiteRegionMappingRepo(infra.GormDB),
 			)
 
-			serv.Execute(&cred)
+			serv.Execute(now, &cred)
 		})
 	}
 

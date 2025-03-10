@@ -41,11 +41,13 @@ type KstarClient struct {
 
 func NewKstarClient(username, password string) *KstarClient {
 	k := &KstarClient{
-		reqClient: req.C(),
-		url:       "http://solar.kstar.com:9000/public",
-		username:  username,
-		password:  password,
-		logger:    zerolog.New(logger.NewWriter("kstar_api.log")).With().Caller().Timestamp().Logger(),
+		reqClient: req.C().
+			SetCommonRetryCount(3).
+			SetCommonRetryFixedInterval(5 * time.Minute),
+		url:      "http://solar.kstar.com:9000/public",
+		username: username,
+		password: password,
+		logger:   zerolog.New(logger.NewWriter("kstar_api.log")).With().Caller().Timestamp().Logger(),
 	}
 
 	k.password = k.EncodePassword(k.password)

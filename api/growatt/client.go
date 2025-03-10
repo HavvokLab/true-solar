@@ -92,6 +92,7 @@ type GrowattClient struct {
 }
 
 func NewGrowattClient(username, token string) *GrowattClient {
+	logger := zerolog.New(logger.NewWriter("growatt_api.log")).With().Caller().Timestamp().Logger()
 	g := &GrowattClient{
 		reqClient: req.C().
 			SetCommonRetryCount(3).
@@ -100,7 +101,7 @@ func NewGrowattClient(username, token string) *GrowattClient {
 		username: username,
 		token:    token,
 		headers:  map[string]string{AuthHeader: token},
-		logger:   zerolog.New(logger.NewWriter("growatt_api.log")).With().Caller().Timestamp().Logger(),
+		logger:   logger,
 	}
 
 	return g
@@ -347,10 +348,11 @@ func (g *GrowattClient) GetRealtimeDeviceBatchDataWithPagination(deviceSNs []str
 	errorResult := model.ApiErrorResponse{}
 	resp, err := g.reqClient.R().
 		SetHeaders(g.headers).
+		SetHeader("Accept", "application/json").
 		SetQueryParams(query).
 		SetSuccessResult(&result).
 		SetErrorResult(&errorResult).
-		Get(url)
+		Post(url)
 
 	if err != nil {
 		raw, _ := io.ReadAll(resp.Body)
@@ -394,6 +396,7 @@ func (g *GrowattClient) GetRealtimeDeviceBatchesData(deviceSNs []string) (*GetRe
 
 		batches = append(batches, deviceSNs[i:j])
 	}
+	g.logger.Info().Int("count", len(batches)).Msg("GrowattClient::GetRealtimeDeviceBatchesData() - splitting device SNs into batches")
 
 	result := GetRealtimeDeviceBatchesDataResponse{
 		Inverters: make([]string, 0),
@@ -428,6 +431,7 @@ func (g *GrowattClient) GetInverterAlertListWithPagination(deviceSN string, page
 	errorResult := model.ApiErrorResponse{}
 	resp, err := g.reqClient.R().
 		SetHeaders(g.headers).
+		SetHeader("Accept", "application/json").
 		SetQueryParams(query).
 		SetSuccessResult(&result).
 		SetErrorResult(&errorResult).

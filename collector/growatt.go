@@ -11,6 +11,7 @@ import (
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/pkg/util"
 	"github.com/HavvokLab/true-solar/repo"
+	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
 	"github.com/sourcegraph/conc"
 	"go.openly.dev/pointy"
@@ -37,7 +38,117 @@ func NewGrowattCollector(
 	}
 }
 
-func (g *GrowattCollector) Run() {}
+func (g *GrowattCollector) Execute(now time.Time, credential *model.GrowattCredential) {
+	defer func() {
+		if r := recover(); r != nil {
+			g.logger.Error().Any("recover", r).Msg("GrowattCollector::Execute() - panic")
+		}
+	}()
+
+	siteRegions, err := g.siteRegionRepo.GetSiteRegionMappings()
+	if err != nil {
+		g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to get site region mappings")
+		return
+	}
+
+	g.siteRegions = siteRegions
+	plantDeviceStatusMap := make(map[string]string)
+	inverterArray := make([]string, 0)
+	documents := make([]interface{}, 0)
+	siteDocuments := make([]model.SiteItem, 0)
+
+	documentCh := make(chan interface{})
+	inverterCh := make(chan string)
+	plantDeviceStatusCh := make(chan map[string]string)
+	doneCh := make(chan bool)
+	errorCh := make(chan error)
+	go g.Collect(credential, now, documentCh, inverterCh, plantDeviceStatusCh, errorCh, doneCh)
+
+DONE:
+	for {
+		select {
+		case <-doneCh:
+			break DONE
+		case err := <-errorCh:
+			g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed")
+			return
+		case doc := <-documentCh:
+			documents = append(documents, doc)
+		case plantDeviceStatus := <-plantDeviceStatusCh:
+			if err := mapstructure.Decode(&plantDeviceStatus, &plantDeviceStatusMap); err != nil {
+				g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to decode plant device status")
+				return
+			}
+		case sn := <-inverterCh:
+			inverterArray = append(inverterArray, sn)
+		}
+	}
+
+	g.logger.Info().Msg("GrowattCollector::Execute() - calculating inverter productions")
+	realtimeDeviceMap, err := g.CalculateInverterProductions(
+		credential,
+		inverterArray,
+	)
+	g.logger.Info().Msg("GrowattCollector::Execute() - calculating inverter productions success")
+
+	if err != nil {
+		g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to calculate inverter productions")
+	}
+
+	for i, doc := range documents {
+		fmt.Println(i, "/", len(documents))
+		if plantItem, ok := doc.(model.PlantItem); ok {
+			if plantItem.ID != nil {
+				if plantStatus, found := plantDeviceStatusMap[*plantItem.ID]; found {
+					plantItem.PlantStatus = &plantStatus
+					documents[i] = plantItem
+				}
+			}
+
+			siteItem := model.SiteItem{
+				Timestamp:   plantItem.Timestamp,
+				VendorType:  plantItem.VendorType,
+				Area:        plantItem.Area,
+				SiteID:      plantItem.SiteID,
+				NodeType:    plantItem.NodeType,
+				Name:        plantItem.Name,
+				Location:    plantItem.Location,
+				PlantStatus: plantItem.PlantStatus,
+				Owner:       plantItem.Owner,
+			}
+
+			siteDocuments = append(siteDocuments, siteItem)
+		} else if deviceItem, ok := doc.(model.DeviceItem); ok {
+			if deviceItem.SN != nil {
+				if data, ok := realtimeDeviceMap[*deviceItem.SN]; ok {
+					deviceItem.TotalPowerGeneration = data.Total
+					deviceItem.DailyPowerGeneration = data.Today
+					documents[i] = deviceItem
+				}
+			}
+		}
+	}
+
+	// collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, time.Now().Format("2006.01.02"))
+	// if err := g.solarRepo.BulkIndex(collectorIndex, documents); err != nil {
+	// 	g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to bulk index documents")
+	// 	return
+	// }
+	// g.logger.Info().Int("count", len(documents)).Msg("GrowattCollector::Execute() - bulk index documents success")
+
+	// if err := g.solarRepo.UpsertSiteStation(siteDocuments); err != nil {
+	// 	g.logger.Error().Err(err).Msg("GrowattCollector::Execute() - failed to upsert site station")
+	// 	return
+	// }
+	// g.logger.Info().Int("count", len(siteDocuments)).Msg("GrowattCollector::Execute() - upsert site station success")
+
+	g.logger.Info().Msg("GrowattCollector::Execute() - all goroutines finished")
+	close(documentCh)
+	close(doneCh)
+	close(errorCh)
+	close(inverterCh)
+	close(plantDeviceStatusCh)
+}
 
 func (g *GrowattCollector) Collect(
 	credential *model.GrowattCredential,
@@ -63,7 +174,6 @@ func (g *GrowattCollector) Collect(
 	plantSize := len(plantList)
 	for i, station := range plantList {
 		plantCount := i + 1
-		g.logger.Info().Msgf("GrowattCollector::Collect() - processing plant %v/%v", plantCount, plantSize)
 
 		station := station
 		producer := func() {
@@ -188,6 +298,13 @@ func (g *GrowattCollector) Collect(
 				}
 			}
 			docCh <- plantItem
+			g.logger.Info().
+				Str("plant_count", fmt.Sprintf("%v/%v", plantCount, plantSize)).
+				Str("username", credential.Username).
+				Str("password", credential.Password).
+				Str("plant_id", stationIdStr).
+				Any("plant", plantItem).
+				Msg("GrowattCollector::Collect() - plant item added")
 
 			deviceList, err := client.GetPlantDeviceList(stationId)
 			if err != nil {
@@ -635,6 +752,15 @@ func (g *GrowattCollector) Collect(
 				}
 
 				docCh <- deviceItem
+				g.logger.Info().
+					Str("plant_count", fmt.Sprintf("%v/%v", plantCount, plantSize)).
+					Str("device_count", fmt.Sprintf("%v/%v", deviceCount, deviceSize)).
+					Str("username", credential.Username).
+					Str("password", credential.Password).
+					Str("plant_id", stationIdStr).
+					Str("device_id", deviceSn).
+					Any("device", deviceItem).
+					Msg("GrowattCollector::Collect() - device item added")
 
 				if deviceTypeRaw == growatt.GrowattDeviceTypeInverter {
 					inverterCh <- deviceSn
@@ -666,6 +792,13 @@ func (g *GrowattCollector) Collect(
 			}
 
 			plantDeviceStatusCh <- map[string]string{stationIdStr: plantStatus}
+			g.logger.Info().
+				Str("plant_count", fmt.Sprintf("%v/%v", plantCount, plantSize)).
+				Str("username", credential.Username).
+				Str("password", credential.Password).
+				Str("plant_id", stationIdStr).
+				Any("plant", plantItem).
+				Msg("GrowattCollector::Collect() - finished ✅")
 		}
 
 		wg.Go(producer)
@@ -677,4 +810,38 @@ func (g *GrowattCollector) Collect(
 	}
 
 	doneCh <- true
+}
+
+type GrowattInverterProduction struct {
+	Total *float64
+	Today *float64
+}
+
+func (g *GrowattCollector) CalculateInverterProductions(credential *model.GrowattCredential, inverterSNs []string) (map[string]GrowattInverterProduction, error) {
+	client := growatt.NewGrowattClient(credential.Username, credential.Token)
+	g.logger.Info().Msg("GrowattCollector::CalculateInverterProductions() - getting realtime device batches data")
+	resp, err := client.GetRealtimeDeviceBatchesData(inverterSNs)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Data == nil {
+		return nil, fmt.Errorf("empty response data")
+	}
+
+	deviceMap := make(map[string]GrowattInverterProduction)
+	g.logger.Info().Int("count", len(resp.Data)).Msg("GrowattCollector::CalculateInverterProductions() - decoding realtime device data")
+	for sn, data := range resp.Data {
+		if mappedData, ok := data[sn].(map[string]interface{}); ok {
+			var decoded growatt.RealtimeDeviceData
+			if err := mapstructure.Decode(&mappedData, &decoded); err == nil {
+				deviceMap[sn] = GrowattInverterProduction{
+					Total: decoded.PowerTotal,
+					Today: decoded.PowerToday,
+				}
+			}
+		}
+	}
+
+	return deviceMap, nil
 }
