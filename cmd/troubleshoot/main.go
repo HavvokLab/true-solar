@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HavvokLab/true-solar/flags"
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/model"
 	"github.com/HavvokLab/true-solar/pkg/logger"
@@ -25,9 +24,7 @@ func init() {
 }
 
 func main() {
-	workerPoolSize, start, end, vendor := flags.TroubleshootFlags()
-	WorkerPoolSize = workerPoolSize
-
+	start, end, vendor := parseFlags()
 	switch strings.ToLower(vendor) {
 	case model.VendorTypeGrowatt:
 		collectGrowatt(start, end)
