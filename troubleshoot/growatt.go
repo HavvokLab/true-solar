@@ -59,11 +59,11 @@ func (g *GrowattTroubleshoot) Execute(
 	}
 
 	g.siteRegions = siteRegions
-	documents := make([]interface{}, 0)
-	documentCh := make(chan interface{})
+	documents := make([]any, 0)
+	docCh := make(chan any)
 	errorCh := make(chan error)
 	doneCh := make(chan bool)
-	go g.collectByDate(credential, date.UTC(), documentCh, errorCh, doneCh)
+	go g.collectByDate(credential, date.UTC(), docCh, errorCh, doneCh)
 
 DONE:
 	for {
@@ -73,7 +73,7 @@ DONE:
 		case err := <-errorCh:
 			g.logger.Error().Err(err).Msg("GrowattTroubleshoot::Execute() - failed")
 			return
-		case doc := <-documentCh:
+		case doc := <-docCh:
 			documents = append(documents, doc)
 		}
 	}
@@ -87,7 +87,7 @@ DONE:
 	g.logger.Info().Int("count", len(documents)).Msg("GrowattTroubleshoot::Execute() - bulk index documents success")
 	g.logger.Info().Msg("GrowattTroubleshoot::Execute() - all goroutines finished")
 
-	close(documentCh)
+	close(docCh)
 	close(doneCh)
 	close(errorCh)
 }
@@ -112,7 +112,9 @@ func (g *GrowattTroubleshoot) collectByDate(
 	plantSize := len(plantList)
 	for i, plant := range plantList {
 		currentPlant := i + 1
+
 		if plant.PlantID == nil {
+			g.logger.Warn().Msg("GrowattTroubleshoot::collectByDate() - plant id is nil")
 			continue
 		}
 
@@ -188,7 +190,30 @@ func (g *GrowattTroubleshoot) collectByDate(
 			long = &parsed
 		}
 
-		for _, daily := range dailyEnergies {
+		var installedCapacity *float64
+		var currency *string
+		if dataLoggerResp, err := client.GetPlantDataLoggerInfo(plantId); err == nil {
+			if dataLoggerResp.Data != nil {
+				if dataLoggerResp.Data.PeakPowerActual != nil {
+					actualData := dataLoggerResp.Data.PeakPowerActual
+
+					if actualData.NominalPower != nil {
+						installedCapacity = pointy.Float64(pointy.Float64Value(actualData.NominalPower, 0) / 1000.0)
+					} else if plantIdentity.Capacity != 0 {
+						installedCapacity = pointy.Float64(plantIdentity.Capacity)
+					}
+
+					if actualData.FormulaMoneyUnitID != nil {
+						currency = pointy.String(strings.ToUpper(pointy.StringValue(actualData.FormulaMoneyUnitID, "0")))
+					}
+				}
+			}
+		}
+
+		dailySize := len(dailyEnergies)
+		for j, daily := range dailyEnergies {
+			dailyCount := j + 1
+			g.logger.Info().Str("daily_count", fmt.Sprintf("%d/%d", dailyCount, dailySize)).Any("daily", daily).Msg("GrowattTroubleshoot::collectByDate() - start loop")
 			dailyEnergy := pointy.StringValue(daily.Energy, "0")
 			parsed, _ := strconv.ParseFloat(dailyEnergy, 64)
 			plantItem := model.PlantItem{
@@ -215,31 +240,17 @@ func (g *GrowattTroubleshoot) collectByDate(
 				YearlyProduction:  yearlyProduction,
 				MonthlyProduction: monthlyProduction,
 				DailyProduction:   &parsed,
+				InstalledCapacity: installedCapacity,
+				Currency:          currency,
 				MonthlyCO2:        pointy.Float64(pointy.Float64Value(monthlyProduction, 0) * 2.079),
-			}
-
-			if dataLoggerResp, err := client.GetPlantDataLoggerInfo(plantId); err == nil {
-				if dataLoggerResp.Data != nil {
-					if dataLoggerResp.Data.PeakPowerActual != nil {
-						actualData := dataLoggerResp.Data.PeakPowerActual
-
-						if actualData.NominalPower != nil {
-							plantItem.InstalledCapacity = pointy.Float64(pointy.Float64Value(actualData.NominalPower, 0) / 1000.0)
-						} else if plantIdentity.Capacity != 0 {
-							plantItem.InstalledCapacity = pointy.Float64(plantIdentity.Capacity)
-						}
-
-						if actualData.FormulaMoneyUnitID != nil {
-							plantItem.Currency = pointy.String(strings.ToUpper(pointy.StringValue(actualData.FormulaMoneyUnitID, "0")))
-						}
-					}
-				}
 			}
 
 			docCh <- plantItem
 			g.logger.Info().
+				Str("username", credential.Username).
 				Int("plant_id", plantId).
 				Str("plant_count", fmt.Sprintf("%d/%d", currentPlant, plantSize)).
+				Str("daily_count", fmt.Sprintf("%d/%d", dailyCount, dailySize)).
 				Any("plant_item", plantItem).
 				Msg("GrowattTroubleshoot::collectByDate() - collect plant item")
 		}
