@@ -1,4 +1,4 @@
-package main
+package flags
 
 import (
 	"flag"
@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// parseFlags parses the workerPoolSize, startDate, endDate, and vendor flags and returns them.
-func parseFlags() (time.Time, time.Time, string) {
+// TroubleshootFlags parses the workerPoolSize, startDate, endDate, and vendor flags and returns them.
+func TroubleshootFlags() (int, time.Time, time.Time, string) {
 	// Define flags
 	workerPoolSize := flag.Int("workerPoolSize", 5, "Worker pool size")
 	startDateStr := flag.String("startDate", "", "Start date in format YYYY-MM-DD")
@@ -38,9 +38,5 @@ func parseFlags() (time.Time, time.Time, string) {
 		log.Fatal("startDate must be before endDate.")
 	}
 
-	if workerPoolSize != nil {
-		WorkerPoolSize = *workerPoolSize
-	}
-
-	return startDate, endDate, *vendor
+	return *workerPoolSize, startDate, endDate, *vendor
 }
