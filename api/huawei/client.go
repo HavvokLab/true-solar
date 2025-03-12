@@ -1,4 +1,4 @@
-package huawei2
+package huawei
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ var HuaweiMapDeviceStatus = map[int]string{
 	1: HuaweiStatusOnline,
 }
 
-type Huawei2Client struct {
+type HuaweiClient struct {
 	reqClient *req.Client
 	username  string
 	password  string
@@ -44,8 +44,8 @@ type Huawei2Client struct {
 	logger    zerolog.Logger
 }
 
-func NewHuawei2Client(username, password string) (*Huawei2Client, error) {
-	h := &Huawei2Client{
+func NewHuaweiClient(username, password string) (*HuaweiClient, error) {
+	h := &HuaweiClient{
 		reqClient: req.C().
 			SetCommonRetryCount(3).
 			SetCommonRetryFixedInterval(5 * time.Minute),
@@ -53,7 +53,7 @@ func NewHuawei2Client(username, password string) (*Huawei2Client, error) {
 		username: username,
 		password: password,
 		headers:  make(map[string]string),
-		logger:   zerolog.New(logger.NewWriter("huawei2_api.log")).With().Timestamp().Logger(),
+		logger:   zerolog.New(logger.NewWriter("huawei_api.log")).With().Timestamp().Logger(),
 	}
 
 	token, err := h.GetToken(username, password)
@@ -65,7 +65,7 @@ func NewHuawei2Client(username, password string) (*Huawei2Client, error) {
 	return h, nil
 }
 
-func (h *Huawei2Client) GetToken(username, password string) (string, error) {
+func (h *HuaweiClient) GetToken(username, password string) (string, error) {
 	url := h.url + "/thirdData/login"
 	body := map[string]any{
 		"userName":   username,
@@ -99,7 +99,7 @@ func (h *Huawei2Client) GetToken(username, password string) (string, error) {
 			Any("error_response", errorResult).
 			Any("body", body).
 			Msg("failed to get token")
-		return "", fmt.Errorf("Huawei2Client::GetToken() - failed")
+		return "", fmt.Errorf("HuaweiClient::GetToken() - failed")
 	}
 
 	var token string
@@ -119,7 +119,7 @@ func (h *Huawei2Client) GetToken(username, password string) (string, error) {
 			Any("result", result).
 			Any("body", body).
 			Msg("empty token")
-		return "", fmt.Errorf("Huawei2Client::GetToken() - failed")
+		return "", fmt.Errorf("HuaweiClient::GetToken() - failed")
 	}
 
 	h.logger.Info().
@@ -127,21 +127,17 @@ func (h *Huawei2Client) GetToken(username, password string) (string, error) {
 		Int("status_code", resp.StatusCode).
 		Any("result", result).
 		Any("body", body).
-		Msg("Huawei2Client::GetToken() - success")
+		Msg("HuaweiClient::GetToken() - success")
 	return token, nil
 }
 
-func (h *Huawei2Client) GetPlantListWithPagination(page int) (*GetPlantListResponse, error) {
-	url := h.url + "/thirdData/stations"
-	body := map[string]any{
-		"pageNo": page,
-	}
+func (h *HuaweiClient) GetPlantList() (*GetPlantListResponse, error) {
+	url := h.url + "/thirdData/getStationList"
 
 	var result GetPlantListResponse
 	var errorResult model.ApiErrorResponse
 	resp, err := h.reqClient.R().
 		SetHeaders(h.headers).
-		SetBody(body).
 		SetSuccessResult(&result).
 		SetErrorResult(&errorResult).
 		Post(url)
@@ -153,7 +149,6 @@ func (h *Huawei2Client) GetPlantListWithPagination(page int) (*GetPlantListRespo
 			Int("status_code", resp.StatusCode).
 			Str("url", url).
 			Str("raw", string(raw)).
-			Any("body", body).
 			Msg("failed to get plant list")
 		return nil, err
 	}
@@ -163,9 +158,8 @@ func (h *Huawei2Client) GetPlantListWithPagination(page int) (*GetPlantListRespo
 			Str("url", url).
 			Int("status_code", resp.StatusCode).
 			Any("error_response", errorResult).
-			Any("body", body).
 			Msg("failed to get plant list")
-		return nil, fmt.Errorf("Huawei2Client::GetPlantList() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetPlantList() - failed")
 	}
 
 	if !result.Success {
@@ -173,51 +167,19 @@ func (h *Huawei2Client) GetPlantListWithPagination(page int) (*GetPlantListRespo
 			Str("url", url).
 			Int("status_code", resp.StatusCode).
 			Any("result", result).
-			Any("body", body).
 			Msg("failed to get plant list")
-		return nil, fmt.Errorf("Huawei2Client::GetPlantList() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetPlantList() - failed")
 	}
 
 	h.logger.Info().
 		Str("url", url).
 		Int("status_code", resp.StatusCode).
-		Any("body", body).
-		Msg("Huawei2Client::GetPlantListWithPagination() - success")
+		Any("result", result).
+		Msg("HuaweiClient::GetPlantListWithPagination() - success")
 	return &result, nil
 }
 
-func (h *Huawei2Client) GetPlantList() ([]*Plant, error) {
-	plants := make([]*Plant, 0)
-	page := 1
-
-	for {
-		result, err := h.GetPlantListWithPagination(page)
-		if err != nil {
-			return nil, err
-		}
-
-		if result.Data == nil || len(result.Data.List) == 0 {
-			break
-		}
-
-		page++
-		plants = append(plants, result.Data.List...)
-		h.logger.Info().
-			Int("page", page).
-			Int("collected", len(plants)).
-			Int("total", *result.Data.Total).
-			Any("plants", plants).
-			Msg("Huawei2Client::GetPlantList() - success")
-
-		if len(plants) >= *result.Data.Total {
-			break
-		}
-	}
-
-	return plants, nil
-}
-
-func (h *Huawei2Client) GetRealtimePlantData(stationCodes string) (*GetRealtimePlantDataResponse, error) {
+func (h *HuaweiClient) GetRealtimePlantData(stationCodes string) (*GetRealtimePlantDataResponse, error) {
 	url := h.url + "/thirdData/getStationRealKpi"
 	body := map[string]any{"stationCodes": stationCodes}
 
@@ -251,7 +213,7 @@ func (h *Huawei2Client) GetRealtimePlantData(stationCodes string) (*GetRealtimeP
 			Any("body", body).
 			Any("error_response", errorResult).
 			Msg("failed to get realtime plant data")
-		return nil, fmt.Errorf("Huawei2Client::GetRealtimePlantData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetRealtimePlantData() - failed")
 	}
 
 	if !result.Success {
@@ -261,7 +223,7 @@ func (h *Huawei2Client) GetRealtimePlantData(stationCodes string) (*GetRealtimeP
 			Any("result", result).
 			Any("body", body).
 			Msg("failed to get realtime plant data")
-		return nil, fmt.Errorf("Huawei2Client::GetRealtimePlantData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetRealtimePlantData() - failed")
 	}
 
 	h.logger.Info().
@@ -269,12 +231,12 @@ func (h *Huawei2Client) GetRealtimePlantData(stationCodes string) (*GetRealtimeP
 		Int("status_code", resp.StatusCode).
 		Any("result", result).
 		Any("body", body).
-		Msg("Huawei2Client::GetRealtimePlantData() - success")
+		Msg("HuaweiClient::GetRealtimePlantData() - success")
 
 	return &result, nil
 }
 
-func (h *Huawei2Client) GetHistoricalPlantData(interval Interval, stationCodes string, collectTime int64) (*GetHistoricalPlantDataResponse, error) {
+func (h *HuaweiClient) GetHistoricalPlantData(interval Interval, stationCodes string, collectTime int64) (*GetHistoricalPlantDataResponse, error) {
 	var url string
 	switch interval {
 	case IntervalMonth:
@@ -320,7 +282,7 @@ func (h *Huawei2Client) GetHistoricalPlantData(interval Interval, stationCodes s
 			Any("body", body).
 			Any("error_response", errorResult).
 			Msg("failed to get historical plant data")
-		return nil, fmt.Errorf("Huawei2Client::GetHistoricalPlantData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetHistoricalPlantData() - failed")
 	}
 
 	if !result.Success {
@@ -331,7 +293,7 @@ func (h *Huawei2Client) GetHistoricalPlantData(interval Interval, stationCodes s
 			Any("result", result).
 			Any("body", body).
 			Msg("failed to get historical plant data")
-		return nil, fmt.Errorf("Huawei2Client::GetHistoricalPlantData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetHistoricalPlantData() - failed")
 	}
 
 	h.logger.Info().
@@ -340,12 +302,12 @@ func (h *Huawei2Client) GetHistoricalPlantData(interval Interval, stationCodes s
 		Any("interval", interval).
 		Any("result", result).
 		Any("body", body).
-		Msg("Huawei2Client::GetHistoricalPlantData() - success")
+		Msg("HuaweiClient::GetHistoricalPlantData() - success")
 
 	return &result, nil
 }
 
-func (h *Huawei2Client) GetDeviceList(stationCodes string) (*GetDeviceListResponse, error) {
+func (h *HuaweiClient) GetDeviceList(stationCodes string) (*GetDeviceListResponse, error) {
 	url := h.url + "/thirdData/getDevList"
 	body := map[string]any{"stationCodes": stationCodes}
 
@@ -377,7 +339,7 @@ func (h *Huawei2Client) GetDeviceList(stationCodes string) (*GetDeviceListRespon
 			Any("body", body).
 			Any("error_response", errorResult).
 			Msg("failed to get device list")
-		return nil, fmt.Errorf("Huawei2Client::GetDeviceList() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetDeviceList() - failed")
 	}
 
 	if !result.Success {
@@ -387,7 +349,7 @@ func (h *Huawei2Client) GetDeviceList(stationCodes string) (*GetDeviceListRespon
 			Any("body", body).
 			Any("result", result).
 			Msg("failed to get device list")
-		return nil, fmt.Errorf("Huawei2Client::GetDeviceList() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetDeviceList() - failed")
 	}
 
 	h.logger.Info().
@@ -395,12 +357,12 @@ func (h *Huawei2Client) GetDeviceList(stationCodes string) (*GetDeviceListRespon
 		Int("status_code", resp.StatusCode).
 		Any("body", body).
 		Any("result", result).
-		Msg("Huawei2Client::GetDeviceList() - success")
+		Msg("HuaweiClient::GetDeviceList() - success")
 
 	return &result, nil
 }
 
-func (h *Huawei2Client) GetRealtimeDeviceData(deviceIds, deviceTypeId string) (*GetRealtimeDeviceDataResponse, error) {
+func (h *HuaweiClient) GetRealtimeDeviceData(deviceIds, deviceTypeId string) (*GetRealtimeDeviceDataResponse, error) {
 	url := h.url + "/thirdData/getDevRealKpi"
 	data := map[string]any{
 		"devIds":    deviceIds,
@@ -435,7 +397,7 @@ func (h *Huawei2Client) GetRealtimeDeviceData(deviceIds, deviceTypeId string) (*
 			Any("body", data).
 			Any("error_response", errorResult).
 			Msg("failed to get realtime device data")
-		return nil, fmt.Errorf("Huawei2Client::GetRealtimeDeviceData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetRealtimeDeviceData() - failed")
 	}
 
 	if !result.Success {
@@ -445,7 +407,7 @@ func (h *Huawei2Client) GetRealtimeDeviceData(deviceIds, deviceTypeId string) (*
 			Any("body", data).
 			Any("result", result).
 			Msg("failed to get realtime device data")
-		return nil, fmt.Errorf("Huawei2Client::GetRealtimeDeviceData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetRealtimeDeviceData() - failed")
 	}
 
 	h.logger.Info().
@@ -453,20 +415,20 @@ func (h *Huawei2Client) GetRealtimeDeviceData(deviceIds, deviceTypeId string) (*
 		Int("status_code", resp.StatusCode).
 		Any("body", data).
 		Any("result", result).
-		Msg("Huawei2Client::GetRealtimeDeviceData() - success")
+		Msg("HuaweiClient::GetRealtimeDeviceData() - success")
 
 	return &result, nil
 }
 
-func (h *Huawei2Client) GetHistoricalDeviceData(interval Interval, deviceId, deviceTypeId string, collectTime int64) (*GetHistoricalDeviceDataResponse, error) {
+func (h *HuaweiClient) GetHistoricalDeviceData(interval Interval, deviceId, deviceTypeId string, collectTime int64) (*GetHistoricalDeviceDataResponse, error) {
 	var url string
 	switch interval {
 	case IntervalMonth:
-		url = h.url + "/thirdData/getKpiDevMonth"
+		url = h.url + "/thirdData/getDevKpiMonth"
 	case IntervalYear:
-		url = h.url + "/thirdData/getKpiDevYear"
+		url = h.url + "/thirdData/getDevKpiYear"
 	default:
-		url = h.url + "/thirdData/getKpiDevDay"
+		url = h.url + "/thirdData/getDevKpiDay"
 	}
 
 	body := map[string]any{
@@ -503,7 +465,7 @@ func (h *Huawei2Client) GetHistoricalDeviceData(interval Interval, deviceId, dev
 			Any("body", body).
 			Any("error_response", errorResult).
 			Msg("failed to get historical device data")
-		return nil, fmt.Errorf("Huawei2Client::GetHistoricalDeviceData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetHistoricalDeviceData() - failed")
 	}
 
 	if !result.Success {
@@ -513,7 +475,7 @@ func (h *Huawei2Client) GetHistoricalDeviceData(interval Interval, deviceId, dev
 			Any("body", body).
 			Any("result", result).
 			Msg("failed to get historical device data")
-		return nil, fmt.Errorf("Huawei2Client::GetHistoricalDeviceData() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetHistoricalDeviceData() - failed")
 	}
 
 	h.logger.Info().
@@ -521,12 +483,12 @@ func (h *Huawei2Client) GetHistoricalDeviceData(interval Interval, deviceId, dev
 		Int("status_code", resp.StatusCode).
 		Any("body", body).
 		Any("result", result).
-		Msg("Huawei2Client::GetHistoricalDeviceData() - success")
+		Msg("HuaweiClient::GetHistoricalDeviceData() - success")
 
 	return &result, nil
 }
 
-func (h *Huawei2Client) GetDeviceAlarm(stationCodes string, from, to int64) (*GetDeviceAlarmResponse, error) {
+func (h *HuaweiClient) GetDeviceAlarm(stationCodes string, from, to int64) (*GetDeviceAlarmResponse, error) {
 	url := h.url + "/thirdData/getAlarmList"
 	body := map[string]any{
 		"stationCodes": stationCodes,
@@ -564,7 +526,7 @@ func (h *Huawei2Client) GetDeviceAlarm(stationCodes string, from, to int64) (*Ge
 			Any("body", body).
 			Any("error_response", errorResult).
 			Msg("failed to get device alarm")
-		return nil, fmt.Errorf("Huawei2Client::GetDeviceAlarm() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetDeviceAlarm() - failed")
 	}
 
 	if !result.Success {
@@ -574,7 +536,7 @@ func (h *Huawei2Client) GetDeviceAlarm(stationCodes string, from, to int64) (*Ge
 			Any("body", body).
 			Any("result", result).
 			Msg("failed to get device alarm")
-		return nil, fmt.Errorf("Huawei2Client::GetDeviceAlarm() - failed")
+		return nil, fmt.Errorf("HuaweiClient::GetDeviceAlarm() - failed")
 	}
 
 	h.logger.Info().
@@ -582,7 +544,7 @@ func (h *Huawei2Client) GetDeviceAlarm(stationCodes string, from, to int64) (*Ge
 		Int("status_code", resp.StatusCode).
 		Any("body", body).
 		Any("result", result).
-		Msg("Huawei2Client::GetDeviceAlarm() - success")
+		Msg("HuaweiClient::GetDeviceAlarm() - success")
 
 	return &result, nil
 }
