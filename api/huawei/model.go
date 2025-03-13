@@ -91,9 +91,10 @@ type RealtimeDeviceData struct {
 }
 
 type RealtimeDeviceDataItem struct {
-	TotalEnergy *float64 `json:"total_cap,omitempty"`
-	ActivePower *float64 `json:"active_power,omitempty"`
-	Status      *int     `json:"run_state,omitempty"`
+	TotalEnergy      *float64     `json:"total_cap,omitempty"`
+	ActivePower      *float64     `json:"active_power,omitempty"`
+	InverterShutdown *interface{} `json:"close_time,omitempty"`
+	Status           *int         `json:"run_state,omitempty"`
 }
 
 type GetRealtimeDeviceDataResponse Response[[]RealtimeDeviceData]

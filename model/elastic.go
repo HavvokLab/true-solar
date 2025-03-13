@@ -5,6 +5,7 @@ import "time"
 const (
 	SolarIndex       = "solarcell"
 	SiteStationIndex = "site-station"
+	AlarmIndex       = "alarm"
 )
 
 const (
