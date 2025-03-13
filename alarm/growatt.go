@@ -36,7 +36,7 @@ func NewGrowattAlarm(solarRepo repo.SolarRepo, snmp *infra.SnmpOrchestrator, rdb
 }
 
 func (s *GrowattAlarm) Run(credential *model.GrowattCredential) error {
-	now := time.Now()
+	now := time.Now().UTC()
 	documents := make([]interface{}, 0)
 	ctx := context.Background()
 	client := growatt.NewGrowattClient(credential.Username, credential.Token)

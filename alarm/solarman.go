@@ -45,7 +45,7 @@ func (s *SolarmanAlarm) Run(credential *model.SolarmanCredential) error {
 	}()
 
 	ctx := context.Background()
-	now := time.Now()
+	now := time.Now().UTC()
 	beginningOfDay := time.Date(now.Year(), now.Month(), now.Day(), 6, 0, 0, 0, time.Local)
 	documents := make([]interface{}, 0)
 

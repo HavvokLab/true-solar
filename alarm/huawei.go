@@ -37,7 +37,7 @@ func NewHuaweiAlarm(solarRepo repo.SolarRepo, snmp *infra.SnmpOrchestrator, rdb 
 }
 
 func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
-	now := time.Now()
+	now := time.Now().UTC()
 	ctx := context.Background()
 	beginTime := time.Date(now.Year(), now.Month(), now.Day(), 6, 0, 0, 0, time.Local).UnixNano() / 1e6
 	endTime := now.UnixNano() / 1e6
