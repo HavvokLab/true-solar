@@ -39,18 +39,38 @@ type KstarClient struct {
 	logger    zerolog.Logger
 }
 
-func NewKstarClient(username, password string) *KstarClient {
+type Option func(*KstarClient)
+
+func WithRetryCount(count int) Option {
+	return func(k *KstarClient) {
+		k.reqClient.SetCommonRetryCount(count)
+	}
+}
+
+func NewKstarClient(username, password string, opts ...Option) *KstarClient {
+	logger := zerolog.New(logger.NewWriter("kstar_api.log")).With().Caller().Timestamp().Logger()
 	k := &KstarClient{
 		reqClient: req.C().
 			SetCommonRetryCount(3).
-			SetCommonRetryFixedInterval(5 * time.Minute),
+			SetCommonRetryFixedInterval(5 * time.Minute).
+			SetTimeout(10 * time.Second).
+			OnBeforeRequest(func(client *req.Client, req *req.Request) error {
+				logger.Debug().
+					Any("request", req.RawURL).
+					Msg("KstarClient::NewKstarClient() - requesting")
+				return nil
+			}),
 		url:      "http://solar.kstar.com:9000/public",
 		username: username,
 		password: password,
-		logger:   zerolog.New(logger.NewWriter("kstar_api.log")).With().Caller().Timestamp().Logger(),
+		logger:   logger,
+	}
+	k.password = k.EncodePassword(k.password)
+
+	for _, opt := range opts {
+		opt(k)
 	}
 
-	k.password = k.EncodePassword(k.password)
 	return k
 }
 

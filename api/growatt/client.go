@@ -82,6 +82,11 @@ func ParseGrowattDeviceType(deviceType int) string {
 	}
 }
 
+var (
+	GrowattEquipmentTypeMapper  = []string{"", "Inverter", "Energy storage machine", "Other equipment", "MAX", "MIX", "SPA", "MIN", "PCS", "HPS", "PBD"}
+	GrowattInverterStatusMapper = []string{"Disconnect", "Online", "Stanby", "Fault"}
+)
+
 type GrowattClient struct {
 	reqClient *req.Client
 	username  string
