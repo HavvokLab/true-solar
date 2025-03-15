@@ -30,6 +30,8 @@ func main() {
 		collectGrowatt(start, end)
 	case model.VendorTypeInvt:
 		collectSolarman(start, end)
+	case model.VendorTypeKstar:
+		collectKstar(start, end)
 	default:
 		log.Panic().Msgf("vendor %s not supported", vendor)
 	}
@@ -67,6 +69,28 @@ func collectSolarman(start, end time.Time) {
 	pool := workerpool.New(WorkerPoolSize)
 	for _, credential := range credentials {
 		serv := troubleshoot.NewSolarmanTroubleshoot(
+			repo.NewSolarRepo(infra.ElasticClient),
+			repo.NewSiteRegionMappingRepo(infra.GormDB),
+		)
+
+		clone := credential
+		pool.Submit(func() {
+			serv.ExecuteByRange(&clone, start, end)
+		})
+	}
+	pool.StopWait()
+}
+
+func collectKstar(start, end time.Time) {
+	credRepo := repo.NewKStarCredentialRepo(infra.GormDB)
+	credentials, err := credRepo.FindAll()
+	if err != nil {
+		log.Panic().Err(err).Msg("error find all credentials")
+	}
+
+	pool := workerpool.New(WorkerPoolSize)
+	for _, credential := range credentials {
+		serv := troubleshoot.NewKstarTroubleshoot(
 			repo.NewSolarRepo(infra.ElasticClient),
 			repo.NewSiteRegionMappingRepo(infra.GormDB),
 		)
