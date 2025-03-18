@@ -12,6 +12,7 @@ import (
 	"github.com/HavvokLab/true-solar/pkg/util"
 	"github.com/HavvokLab/true-solar/repo"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.openly.dev/pointy"
 )
 
@@ -101,7 +102,7 @@ func (h *HuaweiTroubleshoot) collectByDate(
 	beginTime := time.Date(date.Year(), date.Month(), date.Day(), 6, 0, 0, 0, time.UTC).UnixMilli()
 	collectTime := date.UnixMilli()
 
-	client, err := huawei.NewHuaweiClient(credential.Username, credential.Password)
+	client, err := huawei.NewHuaweiClient(credential.Username, credential.Password, huawei.WithRetryCount(0))
 	if err != nil {
 		h.logger.Error().Err(err).Msg("HuaweiTroubleshoot::collectByDate() - failed to create huawei client")
 		errCh <- err
@@ -294,7 +295,11 @@ func (h *HuaweiTroubleshoot) collectByDate(
 		}
 	}
 
-	for _, station := range plantListResp.Data {
+	plantSize := len(plantListResp.Data)
+	for i, station := range plantListResp.Data {
+		plantCount := i + 1
+		log.Info().Str("count", fmt.Sprintf("%d/%d", plantCount, plantSize)).Msg("HuaweiTroubleshoot::collectByDate() - processing plant")
+
 		stationCode := pointy.StringValue(station.Code, "")
 		stationName := pointy.StringValue(station.Name, "")
 		plantNameInfo, _ := util.ParsePlantID(stationName)
@@ -381,4 +386,6 @@ func (h *HuaweiTroubleshoot) collectByDate(
 
 		docCh <- plantItem
 	}
+
+	doneCh <- true
 }

@@ -44,7 +44,15 @@ type HuaweiClient struct {
 	logger    zerolog.Logger
 }
 
-func NewHuaweiClient(username, password string) (*HuaweiClient, error) {
+type Option func(*HuaweiClient)
+
+func WithRetryCount(count int) Option {
+	return func(h *HuaweiClient) {
+		h.reqClient.SetCommonRetryCount(count)
+	}
+}
+
+func NewHuaweiClient(username, password string, opts ...Option) (*HuaweiClient, error) {
 	h := &HuaweiClient{
 		reqClient: req.C().
 			SetCommonRetryCount(3).
@@ -54,6 +62,10 @@ func NewHuaweiClient(username, password string) (*HuaweiClient, error) {
 		password: password,
 		headers:  make(map[string]string),
 		logger:   zerolog.New(logger.NewWriter("huawei_api.log")).With().Timestamp().Logger(),
+	}
+
+	for _, opt := range opts {
+		opt(h)
 	}
 
 	token, err := h.GetToken(username, password)

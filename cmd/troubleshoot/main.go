@@ -114,6 +114,10 @@ func collectHuawei(start, end time.Time) {
 
 	pool := workerpool.New(WorkerPoolSize)
 	for _, credential := range credentials {
+		if credential.Version != 1 {
+			continue
+		}
+
 		serv := troubleshoot.NewHuaweiTroubleshoot(
 			repo.NewSolarRepo(infra.ElasticClient),
 			repo.NewSiteRegionMappingRepo(infra.GormDB),
