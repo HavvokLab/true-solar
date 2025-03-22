@@ -41,7 +41,7 @@ func collect() {
 		cred := credential
 		wg.Go(func() {
 			serv := collector.NewKstarCollector(
-				repo.NewSolarMockRepo(),
+				repo.NewSolarRepo(infra.ElasticClient),
 				repo.NewSiteRegionMappingRepo(infra.GormDB),
 			)
 

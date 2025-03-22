@@ -3,9 +3,10 @@ package model
 import "time"
 
 const (
-	SolarIndex       = "solarcell"
-	SiteStationIndex = "site-station"
-	AlarmIndex       = "alarm"
+	SolarIndex            = "solarcell"
+	SiteStationIndex      = "site-station"
+	AlarmIndex            = "alarm"
+	PerformanceAlarmIndex = "performance-alarm"
 )
 
 const (
@@ -20,10 +21,11 @@ const (
 )
 
 const (
-	VendorTypeHuawei  = "huawei"
-	VendorTypeKstar   = "kstar"
-	VendorTypeGrowatt = "growatt"
-	VendorTypeInvt    = "invt"
+	VendorTypeHuawei   = "huawei"
+	VendorTypeKstar    = "kstar"
+	VendorTypeGrowatt  = "growatt"
+	VendorTypeInvt     = "invt"
+	VendorTypeSolarman = "solarman"
 )
 
 type PlantItem struct {
