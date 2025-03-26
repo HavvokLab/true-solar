@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"sync"
 	"time"
 
 	"github.com/HavvokLab/true-solar/alarm"
@@ -103,14 +104,15 @@ func huawei() {
 	}
 	log.Info().Msg("create redis success")
 
-	wg := conc.NewWaitGroup()
+	wg := sync.WaitGroup{}
 	for _, credential := range credentials {
 		cred := credential
 		if cred.Version != 1 {
 			continue
 		}
 
-		wg.Go(func() {
+		wg.Add(1)
+		go func() {
 			serv := alarm.NewHuaweiAlarm(
 				repo.NewSolarRepo(infra.ElasticClient),
 				snmp,
@@ -118,12 +120,10 @@ func huawei() {
 			)
 
 			serv.Run(&cred)
-		})
+			wg.Done()
+		}()
 	}
-
-	if r := wg.WaitAndRecover(); r != nil {
-		log.Panic().Any("recover", r.Value).Msg("error wait group")
-	}
+	wg.Wait()
 }
 
 func kstar() {
