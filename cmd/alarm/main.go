@@ -53,17 +53,17 @@ func growatt() {
 	if err != nil {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
-
+	log.Info().Msgf("found %d credentials", len(credentials))
 	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeGrowattAlarm, config.GetConfig().SnmpList)
 	if err != nil {
 		log.Panic().Err(err).Msg("error create snmp orchestrator")
 	}
-
+	log.Info().Msg("create snmp orchestrator success")
 	rdb, err := infra.NewRedis()
 	if err != nil {
 		log.Panic().Err(err).Msg("error create redis")
 	}
-
+	log.Info().Msg("create redis success")
 	wg := conc.NewWaitGroup()
 	for _, credential := range credentials {
 		cred := credential
@@ -89,16 +89,19 @@ func huawei() {
 	if err != nil {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
+	log.Info().Msgf("found %d credentials", len(credentials))
 
 	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeHuaweiAlarm, config.GetConfig().SnmpList)
 	if err != nil {
 		log.Panic().Err(err).Msg("error create snmp orchestrator")
 	}
+	log.Info().Msg("create snmp orchestrator success")
 
 	rdb, err := infra.NewRedis()
 	if err != nil {
 		log.Panic().Err(err).Msg("error create redis")
 	}
+	log.Info().Msg("create redis success")
 
 	wg := conc.NewWaitGroup()
 	for _, credential := range credentials {
@@ -129,17 +132,17 @@ func kstar() {
 	if err != nil {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
-
+	log.Info().Msgf("found %d credentials", len(credentials))
 	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeKstarAlarm, config.GetConfig().SnmpList)
 	if err != nil {
 		log.Panic().Err(err).Msg("error create snmp orchestrator")
 	}
-
+	log.Info().Msg("create snmp orchestrator success")
 	rdb, err := infra.NewRedis()
 	if err != nil {
 		log.Panic().Err(err).Msg("error create redis")
 	}
-
+	log.Info().Msg("create redis success")
 	wg := conc.NewWaitGroup()
 	for _, credential := range credentials {
 		cred := credential
@@ -165,17 +168,17 @@ func solarman() {
 	if err != nil {
 		log.Panic().Err(err).Msg("error find all credentials")
 	}
-
+	log.Info().Msgf("found %d credentials", len(credentials))
 	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeSolarmanAlarm, config.GetConfig().SnmpList)
 	if err != nil {
 		log.Panic().Err(err).Msg("error create snmp orchestrator")
 	}
-
+	log.Info().Msg("create snmp orchestrator success")
 	rdb, err := infra.NewRedis()
 	if err != nil {
 		log.Panic().Err(err).Msg("error create redis")
 	}
-
+	log.Info().Msg("create redis success")
 	wg := conc.NewWaitGroup()
 	for _, credential := range credentials {
 		cred := credential
