@@ -59,6 +59,7 @@ func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
 
 	var stationCodeList []string
 	var stationCodeListString []string
+	s.logger.Info().Int("plant_count", len(plantListResp.Data)).Msg("HuaweiAlarm::Run() - get plant list success")
 	for _, plant := range plantListResp.Data {
 		if len(stationCodeList) == 100 {
 			stationCodeListString = append(stationCodeListString, strings.Join(stationCodeList, ","))
@@ -75,12 +76,14 @@ func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
 	mapPlantCodeToDevice := make(map[string][]huawei.Device)
 	mapDeviceSNToAlarm := make(map[string][]huawei.DeviceAlarm)
 	mapInverterIDToRealtimeData := make(map[int]huawei.RealtimeDeviceData)
+	s.logger.Info().Int("station_code_count", len(stationCodeListString)).Msg("HuaweiAlarm::Run() - get station code list success")
 	for _, stationCode := range stationCodeListString {
 		deviceListResp, err := client.GetDeviceList(stationCode)
 		if err != nil {
 			s.logger.Error().Err(err).Msg("HuaweiAlarm::Run() - failed to get device list")
 			return err
 		}
+		s.logger.Info().Int("device_count", len(deviceListResp.Data)).Msg("HuaweiAlarm::Run() - get device list success")
 
 		for _, device := range deviceListResp.Data {
 			if device.PlantCode != nil {
@@ -97,6 +100,7 @@ func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
 			s.logger.Error().Err(err).Msg("HuaweiAlarm::Run() - failed to get device alarm list")
 			return err
 		}
+		s.logger.Info().Int("device_alarm_count", len(deviceAlarmListResp.Data)).Msg("HuaweiAlarm::Run() - get device alarm list success")
 
 		for _, alarm := range deviceAlarmListResp.Data {
 			doubleAlarm := false
@@ -124,6 +128,7 @@ func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
 
 	var inverterIDList []string
 	var inverterIDListString []string
+	s.logger.Info().Int("inverter_count", len(inverterList)).Msg("HuaweiAlarm::Run() - get inverter list success")
 	for _, device := range inverterList {
 		if len(inverterIDList) == 100 {
 			inverterIDListString = append(inverterIDListString, strings.Join(inverterIDList, ","))
@@ -136,12 +141,14 @@ func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
 	}
 	inverterIDListString = append(inverterIDListString, strings.Join(inverterIDList, ","))
 
+	s.logger.Info().Int("inverter_id_count", len(inverterIDListString)).Msg("HuaweiAlarm::Run() - get inverter id list success")
 	for _, inverterID := range inverterIDListString {
 		realtimeDeviceResp, err := client.GetRealtimeDeviceData(inverterID, "1")
 		if err != nil {
 			s.logger.Error().Err(err).Msg("HuaweiAlarm::Run() - failed to get realtime device data")
 			return err
 		}
+		s.logger.Info().Int("realtime_device_count", len(realtimeDeviceResp.Data)).Msg("HuaweiAlarm::Run() - get realtime device data success")
 
 		for _, realtimeDevice := range realtimeDeviceResp.Data {
 			if realtimeDevice.ID != nil {
