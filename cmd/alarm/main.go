@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"time"
 
 	"github.com/HavvokLab/true-solar/alarm"
@@ -12,6 +13,17 @@ import (
 	"github.com/sourcegraph/conc"
 )
 
+// parseFlags parses the workerPoolSize, startDate, endDate, and vendor flags and returns them.
+func parseFlags() string {
+	// Define flags
+	vendor := flag.String("vendor", "", "Vendor name")
+
+	// Parse flags
+	flag.Parse()
+
+	return *vendor
+}
+
 func init() {
 	logger.Init("alarm.log")
 	loc, _ := time.LoadLocation("Asia/Bangkok")
@@ -19,13 +31,19 @@ func init() {
 }
 
 func main() {
-	wg := conc.NewWaitGroup()
-	wg.Go(growatt)
-	wg.Go(kstar)
-	wg.Go(huawei)
-	wg.Go(solarman)
-	if err := wg.WaitAndRecover(); err != nil {
-		log.Panic().Any("recover", err.Value).Msg("error wait group")
+	vendor := parseFlags()
+	log.Info().Msgf("start alarm for vendor: %s", vendor)
+	switch vendor {
+	case "growatt":
+		growatt()
+	case "kstar":
+		kstar()
+	case "huawei":
+		huawei()
+	case "solarman":
+		solarman()
+	default:
+		log.Panic().Msg("invalid vendor")
 	}
 }
 
