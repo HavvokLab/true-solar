@@ -37,14 +37,15 @@ func NewHuaweiAlarm(solarRepo repo.SolarRepo, snmp *infra.SnmpOrchestrator, rdb 
 }
 
 func (s *HuaweiAlarm) Run(credential *model.HuaweiCredential) error {
+	s.logger.Info().Str("username", credential.Username).Msg("HuaweiAlarm::Run() - start alarm")
+
 	now := time.Now().UTC()
 	ctx := context.Background()
 	beginTime := time.Date(now.Year(), now.Month(), now.Day(), 6, 0, 0, 0, time.Local).UnixNano() / 1e6
 	endTime := now.UnixNano() / 1e6
 	documents := make([]interface{}, 0)
 
-	client, err := huawei.NewHuaweiClient(credential.Username, credential.Password)
-
+	client, err := huawei.NewHuaweiClient(credential.Username, credential.Password, huawei.WithRetryCount(0))
 	if err != nil {
 		s.logger.Error().Err(err).Msg("HuaweiAlarm::Run() - failed to create huawei client")
 		return err
