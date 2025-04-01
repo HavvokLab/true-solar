@@ -56,7 +56,8 @@ func NewHuaweiClient(username, password string, opts ...Option) (*HuaweiClient, 
 	h := &HuaweiClient{
 		reqClient: req.C().
 			SetCommonRetryCount(3).
-			SetCommonRetryFixedInterval(5 * time.Minute),
+			SetCommonRetryFixedInterval(5 * time.Minute).
+			SetTimeout(10 * time.Second),
 		url:      "https://sg5.fusionsolar.huawei.com",
 		username: username,
 		password: password,

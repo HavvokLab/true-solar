@@ -43,6 +43,8 @@ func main() {
 		huawei()
 	case "solarman":
 		solarman()
+	case "clear":
+		clear()
 	default:
 		log.Panic().Msg("invalid vendor")
 	}
@@ -196,4 +198,17 @@ func solarman() {
 	if r := wg.WaitAndRecover(); r != nil {
 		log.Panic().Any("recover", r.Value).Msg("error wait group")
 	}
+}
+
+func clear() {
+	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeClearAlarm, config.GetConfig().SnmpList)
+	if err != nil {
+		log.Panic().Err(err).Msg("error create snmp orchestrator")
+	}
+
+	clearAlarm := alarm.NewClearAlarm(repo.NewSolarRepo(infra.ElasticClient), snmp)
+	if err := clearAlarm.Run(); err != nil {
+		log.Panic().Err(err).Msg("error run clear alarm")
+	}
+
 }

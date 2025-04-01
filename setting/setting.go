@@ -6,4 +6,5 @@ const (
 	CrontabHuawei2DayTime   = "0 17 * * *"
 	CrontabHuawei2NightTime = "0 19 * * *"
 	CrontabAlarmTime        = "*/15 7-18 * * *"
+	CrontabClearAlarmTime   = "0 6 * * *"
 )

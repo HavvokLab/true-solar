@@ -14,6 +14,7 @@ type SolarRepo interface {
 	UpsertSiteStation(docs []model.SiteItem) error
 	GetPerformanceLow(duration int, efficiencyFactor float64, focusHour int, thresholdPct float64) ([]*elastic.AggregationBucketCompositeItem, error)
 	GetSumPerformanceLow(duration int) ([]*elastic.AggregationBucketCompositeItem, error)
+	GetUniquePlantByIndex(index string) ([]*elastic.AggregationBucketKeyItem, error)
 }
 
 type solarRepo struct {
@@ -259,4 +260,46 @@ func (r *solarRepo) GetSumPerformanceLow(duration int) ([]*elastic.AggregationBu
 	}
 
 	return items, err
+}
+
+func (r *solarRepo) GetUniquePlantByIndex(index string) ([]*elastic.AggregationBucketKeyItem, error) {
+	ctx := context.Background()
+	termAggregation := elastic.NewTermsAggregation().
+		Field("name.keyword").
+		Size(10000)
+
+	termAggregation = termAggregation.
+		SubAggregation(
+			"data",
+			elastic.
+				NewTopHitsAggregation().
+				Size(1).
+				FetchSourceContext(
+					elastic.NewFetchSourceContext(true).
+						Include("name", "area", "vendor_type", "installed_capacity", "location", "owner"),
+				),
+		)
+
+	searchQuery := r.elastic.Search(index).
+		Size(0).
+		Query(elastic.NewBoolQuery().Must(
+			elastic.NewMatchQuery("data_type", model.DataTypePlant),
+		)).
+		Aggregation("plant", termAggregation)
+
+	firstResult, err := searchQuery.Pretty(true).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if firstResult.Aggregations == nil {
+		return nil, errors.New("cannot get result aggregations")
+	}
+
+	plant, found := firstResult.Aggregations.Terms("plant")
+	if !found {
+		return nil, errors.New("cannot get result term plant")
+	}
+
+	return plant.Buckets, nil
 }
