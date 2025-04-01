@@ -85,7 +85,7 @@ func (s *GrowattAlarm) Run(credential *model.GrowattCredential) error {
 					payload := fmt.Sprintf("%s-Error-%s", alarmName, vals[0])
 					severity := infra.ClearSeverity
 					document = model.NewSnmpAlarmItem(s.vendorType, deviceName, payload, alarmName, severity, deviceLastUpdateTime)
-					s.snmp.SendTrap(deviceName, alarmName, payload, severity, deviceLastUpdateTime)
+					s.snmp.SendTrap(deviceName, payload, alarmName, severity, deviceLastUpdateTime)
 				}
 
 				if err := s.rdb.Del(ctx, key).Err(); err != nil {
@@ -105,7 +105,7 @@ func (s *GrowattAlarm) Run(credential *model.GrowattCredential) error {
 				payload := fmt.Sprintf("%s-Error-0", deviceType)
 				severity := "4"
 				document = model.NewSnmpAlarmItem(s.vendorType, deviceName, payload, alarmName, severity, deviceLastUpdateTime)
-				s.snmp.SendTrap(deviceName, alarmName, payload, severity, deviceLastUpdateTime)
+				s.snmp.SendTrap(deviceName, payload, alarmName, severity, deviceLastUpdateTime)
 			default:
 				date := now.AddDate(0, 0, -1).Format("2006-01-02")
 				alarms, err := client.GetInverterAlertList(deviceSN)
@@ -126,8 +126,8 @@ func (s *GrowattAlarm) Run(credential *model.GrowattCredential) error {
 					alarmName := fmt.Sprintf("Growatt,%s,%s", pointy.StringValue(alarm.AlarmMessage, ""), deviceModel)
 					payload := fmt.Sprintf("%s-Error-%d", deviceType, pointy.IntValue(alarm.AlarmCode, 0))
 					severity := infra.MajorSeverity
-					document = model.NewSnmpAlarmItem(s.vendorType, deviceName, payload, alarmName, severity, deviceLastUpdateTime)
-					s.snmp.SendTrap(deviceName, alarmName, payload, severity, date)
+					document = model.NewSnmpAlarmItem(s.vendorType, deviceName, payload, alarmName, severity, date)
+					s.snmp.SendTrap(deviceName, payload, alarmName, severity, date)
 				}
 			}
 
