@@ -75,6 +75,9 @@ func (s *GrowattAlarm) Run(credential *model.GrowattCredential) error {
 				key := fmt.Sprintf("%d,%s,%s,%s", plantID, plantName, deviceType, deviceSN)
 				val, err := s.rdb.Get(ctx, key).Result()
 				if err != nil {
+					if err == redis.Nil {
+						continue
+					}
 					s.logger.Error().Err(err).Msg("GrowattAlarm::Run() - failed to get redis key")
 					continue
 				}
