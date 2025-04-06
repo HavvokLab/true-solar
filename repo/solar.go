@@ -318,8 +318,14 @@ func (r *solarRepo) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceA
 		}
 
 		for _, hit := range results.Hits.Hits {
-			buf, _ := json.Marshal(hit)
-			fmt.Println(string(buf))
+			item := &model.SnmpPerformanceAlarmItem{}
+			buf, _ := hit.Source.MarshalJSON()
+			if err := json.Unmarshal(buf, &item); err != nil {
+				continue
+			}
+
+			fmt.Println(item)
+			items = append(items, item)
 		}
 
 		if len(results.Hits.Hits) < 1000 {
