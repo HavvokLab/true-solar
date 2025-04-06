@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -317,7 +318,8 @@ func (r *solarRepo) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceA
 		}
 
 		for _, hit := range results.Hits.Hits {
-			fmt.Println(hit)
+			buf, _ := json.Marshal(hit)
+			fmt.Println(string(buf))
 		}
 
 		if len(results.Hits.Hits) < 1000 {
