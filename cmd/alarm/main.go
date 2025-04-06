@@ -8,6 +8,7 @@ import (
 	"github.com/HavvokLab/true-solar/alarm"
 	"github.com/HavvokLab/true-solar/config"
 	"github.com/HavvokLab/true-solar/infra"
+	"github.com/HavvokLab/true-solar/model"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
 	"github.com/rs/zerolog/log"
@@ -221,18 +222,22 @@ func performance() {
 		log.Panic().Err(err).Msg("error create snmp orchestrator")
 	}
 
+	solarRepo := repo.NewSolarRepo(infra.ElasticClient)
+	installedCapacityRepo := repo.NewInstalledCapacityRepo(infra.GormDB)
+	performanceAlarmConfigRepo := repo.NewPerformanceAlarmConfigRepo(infra.GormDB)
+
 	wg := sync.WaitGroup{}
 	lowAlarm := alarm.NewLowPerformanceAlarm(
-		repo.NewSolarRepo(infra.ElasticClient),
-		repo.NewInstalledCapacityRepo(infra.GormDB),
-		repo.NewPerformanceAlarmConfigRepo(infra.GormDB),
+		solarRepo,
+		installedCapacityRepo,
+		performanceAlarmConfigRepo,
 		snmp,
 	)
 
 	sumAlarm := alarm.NewSumPerformanceAlarm(
-		repo.NewSolarRepo(infra.ElasticClient),
-		repo.NewInstalledCapacityRepo(infra.GormDB),
-		repo.NewPerformanceAlarmConfigRepo(infra.GormDB),
+		solarRepo,
+		installedCapacityRepo,
+		performanceAlarmConfigRepo,
 		snmp,
 	)
 
@@ -251,6 +256,13 @@ func performance() {
 		}
 		wg.Done()
 	}()
-
 	wg.Wait()
+
+	items, err := solarRepo.GetPerformanceAlarm(model.PerformanceAlarmIndex)
+	if err != nil {
+		log.Panic().Err(err).Msg("error get performance alarm")
+	}
+
+	log.Info().Msgf("found %d performance alarm", len(items))
+
 }

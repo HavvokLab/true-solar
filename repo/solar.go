@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -15,6 +16,7 @@ type SolarRepo interface {
 	GetPerformanceLow(duration int, efficiencyFactor float64, focusHour int, thresholdPct float64) ([]*elastic.AggregationBucketCompositeItem, error)
 	GetSumPerformanceLow(duration int) ([]*elastic.AggregationBucketCompositeItem, error)
 	GetUniquePlantByIndex(index string) ([]*elastic.AggregationBucketKeyItem, error)
+	GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceAlarmItem, error)
 }
 
 type solarRepo struct {
@@ -302,4 +304,32 @@ func (r *solarRepo) GetUniquePlantByIndex(index string) ([]*elastic.AggregationB
 	}
 
 	return plant.Buckets, nil
+}
+
+func (r *solarRepo) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceAlarmItem, error) {
+	ctx := context.Background()
+	scroll := r.elastic.Scroll(index).Size(1000).Scroll("2m")
+
+	items := make([]*model.SnmpPerformanceAlarmItem, 0)
+	for {
+		results, err := scroll.Do(ctx)
+		if err != nil {
+			break
+		}
+
+		for _, hit := range results.Hits.Hits {
+			var item model.SnmpPerformanceAlarmItem
+			if err := json.Unmarshal(hit.Source, &item); err != nil {
+				continue
+			}
+
+			items = append(items, &item)
+		}
+
+		if len(results.Hits.Hits) < 1000 {
+			break
+		}
+	}
+
+	return items, nil
 }
