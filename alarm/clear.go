@@ -194,3 +194,19 @@ func (s *ClearAlarm) Payload(date *time.Time, plant *model.PlantItem) ([]*ClearA
 
 	return payloads, nil
 }
+
+func (s *ClearAlarm) ClearPerformanceAlarm() error {
+	date := time.Now().AddDate(0, 0, -1)
+	index := fmt.Sprintf("%s-%s", model.PerformanceAlarmIndex, date.Format("2006.01.02"))
+	items, err := s.solarRepo.GetPerformanceAlarm(index)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("error getting performance alarm")
+		return err
+	}
+
+	for _, item := range items {
+		s.snmp.SendTrap(item.DeviceName, item.AlertName, item.Description, infra.ClearSeverity, date.Format(time.RFC3339Nano))
+	}
+
+	return nil
+}

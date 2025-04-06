@@ -13,8 +13,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// parseFlags parses the workerPoolSize, startDate, endDate, and vendor flags and returns them.
-
 func init() {
 	logger.Init("clear_alarm.log")
 	loc, _ := time.LoadLocation("Asia/Bangkok")
@@ -23,18 +21,31 @@ func init() {
 
 func main() {
 	cron := gocron.NewScheduler(time.Local)
-	cron.Cron(setting.CrontabClearAlarmTime).Do(runAlarm)
+	cron.Cron(setting.CrontabClearPerformanceAlarmTime).Do(runPerformanceAlarm)
 	cron.StartBlocking()
 }
 
-func runAlarm() {
+//! unused alarm, but keep it for future use
+// func runAlarm() {
+// 	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeClearAlarm, config.GetConfig().SnmpList)
+// 	if err != nil {
+// 		log.Panic().Err(err).Msg("error create snmp orchestrator")
+// 	}
+
+// 	clearAlarm := alarm.NewClearAlarm(repo.NewSolarRepo(infra.ElasticClient), snmp)
+// 	if err := clearAlarm.Run(); err != nil {
+// 		log.Panic().Err(err).Msg("error run clear alarm")
+// 	}
+// }
+
+func runPerformanceAlarm() {
 	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeClearAlarm, config.GetConfig().SnmpList)
 	if err != nil {
 		log.Panic().Err(err).Msg("error create snmp orchestrator")
 	}
 
 	clearAlarm := alarm.NewClearAlarm(repo.NewSolarRepo(infra.ElasticClient), snmp)
-	if err := clearAlarm.Run(); err != nil {
+	if err := clearAlarm.ClearPerformanceAlarm(); err != nil {
 		log.Panic().Err(err).Msg("error run clear alarm")
 	}
 }

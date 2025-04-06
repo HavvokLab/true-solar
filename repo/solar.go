@@ -323,8 +323,6 @@ func (r *solarRepo) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceA
 			if err := json.Unmarshal(buf, &item); err != nil {
 				continue
 			}
-
-			fmt.Println(item)
 			items = append(items, item)
 		}
 
