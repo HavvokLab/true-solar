@@ -133,6 +133,7 @@ func (p SumPerformanceAlarm) Run() error {
 
 	var alarmCount int
 	var failedAlarmCount int
+	documents := make([]any, 0)
 	if len(filteredBuckets) > 0 {
 		bucketBatches := p.chunkBy(filteredBuckets, setting.PerformanceAlarmSnmpBatchSize)
 
@@ -154,7 +155,9 @@ func (p SumPerformanceAlarm) Run() error {
 									continue
 								}
 
+								document := model.NewSnmpPerformanceAlarmItem("sum", plantName, alarmName, payload, severity, now.Format(time.RFC3339Nano))
 								p.snmp.SendTrap(plantName, alarmName, payload, severity, now.Format(time.RFC3339Nano))
+								documents = append(documents, document)
 								alarmCount++
 								batchAlarmCount++
 							}
@@ -172,6 +175,12 @@ func (p SumPerformanceAlarm) Run() error {
 		p.logger.Info().Int("alarm_count", alarmCount).Msg("completed to send alarms")
 		p.logger.Info().Int("failed_alarm_count", failedAlarmCount).Msg("failed to send alarms")
 		p.logger.Info().Str("duration", time.Since(now).String()).Msg("polling finished")
+	}
+
+	index := fmt.Sprintf("%s-%s", model.PerformanceAlarmIndex, now.Format("2006.01.02"))
+	if err := p.solarRepo.BulkIndex(index, documents); err != nil {
+		p.logger.Error().Err(err).Msg("SumPerformanceAlarm::Run() - failed to bulk index")
+		return err
 	}
 
 	return nil
