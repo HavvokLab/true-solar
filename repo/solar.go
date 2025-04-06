@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -318,12 +317,7 @@ func (r *solarRepo) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceA
 		}
 
 		for _, hit := range results.Hits.Hits {
-			var item model.SnmpPerformanceAlarmItem
-			if err := json.Unmarshal(hit.Source, &item); err != nil {
-				continue
-			}
-
-			items = append(items, &item)
+			fmt.Println(hit)
 		}
 
 		if len(results.Hits.Hits) < 1000 {
