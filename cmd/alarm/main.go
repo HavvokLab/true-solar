@@ -45,6 +45,8 @@ func main() {
 		solarman()
 	case "clear":
 		clear()
+	case "performance":
+		performance()
 	default:
 		log.Panic().Msg("invalid vendor")
 	}
@@ -211,4 +213,44 @@ func clear() {
 		log.Panic().Err(err).Msg("error run clear alarm")
 	}
 
+}
+
+func performance() {
+	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeClearAlarm, config.GetConfig().SnmpList)
+	if err != nil {
+		log.Panic().Err(err).Msg("error create snmp orchestrator")
+	}
+
+	wg := sync.WaitGroup{}
+	lowAlarm := alarm.NewLowPerformanceAlarm(
+		repo.NewSolarRepo(infra.ElasticClient),
+		repo.NewInstalledCapacityRepo(infra.GormDB),
+		repo.NewPerformanceAlarmConfigRepo(infra.GormDB),
+		snmp,
+	)
+
+	sumAlarm := alarm.NewSumPerformanceAlarm(
+		repo.NewSolarRepo(infra.ElasticClient),
+		repo.NewInstalledCapacityRepo(infra.GormDB),
+		repo.NewPerformanceAlarmConfigRepo(infra.GormDB),
+		snmp,
+	)
+
+	wg.Add(1)
+	go func() {
+		if err := lowAlarm.Run(); err != nil {
+			log.Error().Err(err).Msg("error run low performance alarm")
+		}
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		if err := sumAlarm.Run(); err != nil {
+			log.Error().Err(err).Msg("error run sum performance alarm")
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
