@@ -8,4 +8,6 @@ const (
 	CrontabAlarmTime                 = "*/15 7-18 * * *"
 	CrontabClearAlarmTime            = "0 6 * * *"
 	CrontabClearPerformanceAlarmTime = "0 6 * * *"
+	CrontabLowPerformanceAlarmTime   = "0 8 * * *"
+	CrontabSumPerformanceAlarmTime   = "*/10 * * * *"
 )
