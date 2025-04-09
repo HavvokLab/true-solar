@@ -23,8 +23,8 @@ func init() {
 
 func main() {
 	cron := gocron.NewScheduler(time.Local)
-	cron.Cron(setting.CrontabCollectDayTime).Do(collect)
-	cron.Cron(setting.CrontabCollectNightTime).Do(collect)
+	cron.Cron(setting.CrontabSolarmanCollectDayTime).Do(collect)
+	cron.Cron(setting.CrontabSolarmanCollectNightTime).Do(collect)
 	cron.Cron(setting.CrontabAlarmTime).Do(runAlarm)
 	cron.StartBlocking()
 }
