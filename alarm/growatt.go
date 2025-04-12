@@ -111,7 +111,7 @@ func (s *GrowattAlarm) Run(credential *model.GrowattCredential) error {
 				s.snmp.SendTrap(deviceName, payload, alarmName, severity, deviceLastUpdateTime)
 			default:
 				date := now.AddDate(0, 0, -1).Format("2006-01-02")
-				alarms, err := client.GetInverterAlertList(deviceSN)
+				alarms, err := client.GetInverterAlertList(deviceSN, now.AddDate(0, 0, -1))
 				if err != nil {
 					s.logger.Error().Err(err).Msg("GrowattAlarm::Run() - failed to get inverter alert list")
 					continue

@@ -31,3 +31,7 @@ func (r *solarMock) GetSumPerformanceLow(duration int) ([]*elastic.AggregationBu
 func (r *solarMock) GetUniquePlantByIndex(index string) ([]*elastic.AggregationBucketKeyItem, error) {
 	return nil, nil
 }
+
+func (r *solarMock) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceAlarmItem, error) {
+	return nil, nil
+}

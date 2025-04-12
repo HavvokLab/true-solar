@@ -424,10 +424,11 @@ func (g *GrowattClient) GetRealtimeDeviceBatchesData(deviceSNs []string) (*GetRe
 	return &result, nil
 }
 
-func (g *GrowattClient) GetInverterAlertListWithPagination(deviceSN string, page, size int) (*GetInverterAlertListResponse, error) {
+func (g *GrowattClient) GetInverterAlertListWithPagination(deviceSN string, date time.Time, page, size int) (*GetInverterAlertListResponse, error) {
 	url := g.url + "/device/inverter/alarm"
 	query := map[string]string{
 		"device_sn": deviceSN,
+		"date":      date.Format("2006-01-02"),
 		"page":      strconv.Itoa(page),
 		"perpage":   strconv.Itoa(size),
 	}
@@ -476,11 +477,11 @@ func (g *GrowattClient) GetInverterAlertListWithPagination(deviceSN string, page
 	return &result, nil
 }
 
-func (g *GrowattClient) GetInverterAlertList(deviceSN string) ([]AlarmItem, error) {
+func (g *GrowattClient) GetInverterAlertList(deviceSN string, date time.Time) ([]AlarmItem, error) {
 	alerts := make([]AlarmItem, 0)
 	page := 1
 	for {
-		res, err := g.GetInverterAlertListWithPagination(deviceSN, page, MaxPageSize)
+		res, err := g.GetInverterAlertListWithPagination(deviceSN, date, page, MaxPageSize)
 		if err != nil {
 			return nil, err
 		}
