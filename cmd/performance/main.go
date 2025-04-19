@@ -13,6 +13,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	MaxRetries = 5
+	DelayRetry = 5 * 60 // 5 minutes
+)
+
 func init() {
 	logger.Init("performance_alarm.log")
 	loc, _ := time.LoadLocation("Asia/Bangkok")
@@ -42,9 +47,19 @@ func lowPerformanceAlarm() {
 		snmp,
 	)
 
-	if err := lowAlarm.Run(); err != nil {
-		log.Error().Err(err).Msg("error run low performance alarm")
+	retryCount := 0
+	for retryCount < MaxRetries {
+		if err := lowAlarm.Run(); err != nil {
+			log.Warn().Err(err).Msg("⚠️ error run low performance alarm and waiting for retry...")
+			time.Sleep(DelayRetry * time.Second)
+
+			retryCount++
+		} else {
+			log.Info().Msg("✅ low performance alarm completed successfully")
+			return
+		}
 	}
+	log.Error().Err(err).Msgf("❌ low performance alarm failed after %d retries", MaxRetries)
 }
 
 func sumPerformanceAlarm() {
