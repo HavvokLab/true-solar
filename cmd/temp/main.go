@@ -218,15 +218,21 @@ func main() {
 		}
 
 		for _, hit := range res.Hits.Hits {
-			doc := model.BulkDocument{
-				Date:       &date,
-				BulkType:   model.BulkUpdate,
-				DocumentId: hit.Id,
-				Document: map[string]any{
-					"installed_capacity": temp.NewCapacityFloat(),
-				},
+			// Get all days in the month
+			startOfMonth := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+			endOfMonth := startOfMonth.AddDate(0, 1, -1)
+
+			for d := startOfMonth; !d.After(endOfMonth); d = d.AddDate(0, 0, 1) {
+				doc := model.BulkDocument{
+					Date:       &d,
+					BulkType:   model.BulkUpdate,
+					DocumentId: hit.Id,
+					Document: map[string]any{
+						"installed_capacity": temp.NewCapacityFloat(),
+					},
+				}
+				bulkDocuments = append(bulkDocuments, doc)
 			}
-			bulkDocuments = append(bulkDocuments, doc)
 		}
 	}
 

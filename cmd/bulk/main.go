@@ -107,5 +107,5 @@ func main() {
 }
 
 func indexName(date *time.Time) string {
-	return fmt.Sprintf("%v-%v.*", model.SolarIndex, date.Format("2006.01"))
+	return fmt.Sprintf("%v-%v.*", model.SolarIndex, date.Format("2006.01.02"))
 }
