@@ -2,14 +2,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/HavvokLab/true-solar/alarm"
 	"github.com/HavvokLab/true-solar/config"
 	"github.com/HavvokLab/true-solar/infra"
-	"github.com/HavvokLab/true-solar/model"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
 	"github.com/rs/zerolog/log"
@@ -218,22 +216,22 @@ func clear() {
 }
 
 func performance() {
-	// snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeClearAlarm, config.GetConfig().SnmpList)
-	// if err != nil {
-	// 	log.Panic().Err(err).Msg("error create snmp orchestrator")
-	// }
+	snmp, err := infra.NewSnmpOrchestrator(infra.TrapTypeClearAlarm, config.GetConfig().SnmpList)
+	if err != nil {
+		log.Panic().Err(err).Msg("error create snmp orchestrator")
+	}
 
 	solarRepo := repo.NewSolarRepo(infra.ElasticClient)
-	// installedCapacityRepo := repo.NewInstalledCapacityRepo(infra.GormDB)
-	// performanceAlarmConfigRepo := repo.NewPerformanceAlarmConfigRepo(infra.GormDB)
+	installedCapacityRepo := repo.NewInstalledCapacityRepo(infra.GormDB)
+	performanceAlarmConfigRepo := repo.NewPerformanceAlarmConfigRepo(infra.GormDB)
 
-	// wg := sync.WaitGroup{}
-	// lowAlarm := alarm.NewLowPerformanceAlarm(
-	// 	solarRepo,
-	// 	installedCapacityRepo,
-	// 	performanceAlarmConfigRepo,
-	// 	snmp,
-	// )
+	wg := sync.WaitGroup{}
+	lowAlarm := alarm.NewLowPerformanceAlarm(
+		solarRepo,
+		installedCapacityRepo,
+		performanceAlarmConfigRepo,
+		snmp,
+	)
 
 	// sumAlarm := alarm.NewSumPerformanceAlarm(
 	// 	solarRepo,
@@ -242,13 +240,13 @@ func performance() {
 	// 	snmp,
 	// )
 
-	// wg.Add(1)
-	// go func() {
-	// 	if err := lowAlarm.Run(); err != nil {
-	// 		log.Error().Err(err).Msg("error run low performance alarm")
-	// 	}
-	// 	wg.Done()
-	// }()
+	wg.Add(1)
+	go func() {
+		if err := lowAlarm.Run(); err != nil {
+			log.Error().Err(err).Msg("error run low performance alarm")
+		}
+		wg.Done()
+	}()
 
 	// wg.Add(1)
 	// go func() {
@@ -258,13 +256,4 @@ func performance() {
 	// 	wg.Done()
 	// }()
 	// wg.Wait()
-
-	index := fmt.Sprintf("%s-%s", model.PerformanceAlarmIndex, time.Now().Format("2006.01.02"))
-	items, err := solarRepo.GetPerformanceAlarm(index)
-	if err != nil {
-		log.Panic().Err(err).Msg("error get performance alarm")
-	}
-
-	log.Info().Msgf("found %d performance alarm", len(items))
-
 }
