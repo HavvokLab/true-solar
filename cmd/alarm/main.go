@@ -224,8 +224,6 @@ func performance() {
 	solarRepo := repo.NewSolarRepo(infra.ElasticClient)
 	installedCapacityRepo := repo.NewInstalledCapacityRepo(infra.GormDB)
 	performanceAlarmConfigRepo := repo.NewPerformanceAlarmConfigRepo(infra.GormDB)
-
-	wg := sync.WaitGroup{}
 	lowAlarm := alarm.NewLowPerformanceAlarm(
 		solarRepo,
 		installedCapacityRepo,
@@ -233,27 +231,7 @@ func performance() {
 		snmp,
 	)
 
-	// sumAlarm := alarm.NewSumPerformanceAlarm(
-	// 	solarRepo,
-	// 	installedCapacityRepo,
-	// 	performanceAlarmConfigRepo,
-	// 	snmp,
-	// )
-
-	wg.Add(1)
-	go func() {
-		if err := lowAlarm.Run(); err != nil {
-			log.Error().Err(err).Msg("error run low performance alarm")
-		}
-		wg.Done()
-	}()
-
-	// wg.Add(1)
-	// go func() {
-	// 	if err := sumAlarm.Run(); err != nil {
-	// 		log.Error().Err(err).Msg("error run sum performance alarm")
-	// 	}
-	// 	wg.Done()
-	// }()
-	// wg.Wait()
+	if err := lowAlarm.Run(); err != nil {
+		log.Error().Err(err).Msg("error run low performance alarm")
+	}
 }
