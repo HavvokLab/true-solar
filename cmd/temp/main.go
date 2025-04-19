@@ -56,21 +56,39 @@ func (t *Temp) NewCapacityFloat() float64 {
 }
 
 func main() {
+	log.Info().Msg("opening temp.csv file")
 	file, err := os.Open("temp.csv")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to open file")
 	}
 	defer file.Close()
 
+	log.Info().Msg("unmarshaling CSV file")
 	var temps []Temp
 	if err := gocsv.UnmarshalFile(file, &temps); err != nil {
 		log.Fatal().Err(err).Msg("failed to unmarshal CSV")
 	}
+	log.Info().Int("records", len(temps)).Msg("CSV file unmarshaled successfully")
 
+	log.Info().Msg("processing records and creating bulk documents")
 	bulkDocuments := make([]model.BulkDocument, 0)
-	for _, temp := range temps {
+	for i, temp := range temps {
+		log.Debug().
+			Int("index", i).
+			Str("vendor", temp.Vendor).
+			Str("site_name", temp.SiteName).
+			Str("id", temp.Id).
+			Msg("processing record")
+
 		ids := findDocumentId(context.Background(), &temp)
 		date := temp.Date()
+
+		log.Debug().
+			Int("matches", len(ids)).
+			Time("date", date).
+			Float64("new_capacity", temp.NewCapacityFloat()).
+			Msg("found matching documents")
+
 		for _, id := range ids {
 			doc := model.BulkDocument{
 				Date:       &date,
@@ -83,13 +101,16 @@ func main() {
 			bulkDocuments = append(bulkDocuments, doc)
 		}
 	}
+	log.Info().Int("total_documents", len(bulkDocuments)).Msg("finished creating bulk documents")
 
+	log.Info().Msg("creating output JSON file")
 	file, err = os.Create("documents.json")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create file")
 	}
 	defer file.Close()
 
+	log.Info().Msg("encoding documents to JSON")
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(bulkDocuments); err != nil {
