@@ -227,7 +227,7 @@ func main() {
 				log.Fatal().Err(err).Msg("failed to unmarshal hit source")
 			}
 
-			date, err := time.Parse("2006-01-02T15:04:05.999999999Z", doc["@timestamp"].(string))
+			date, err := time.Parse(time.RFC3339Nano, doc["@timestamp"].(string))
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to parse date")
 			}
