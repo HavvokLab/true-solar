@@ -186,7 +186,7 @@ func main() {
 		req := elastic.NewSearchRequest().
 			Index(temp.Index()).
 			Query(query).
-			FetchSourceContext(elastic.NewFetchSourceContext(true).Include("_id")).
+			FetchSourceContext(elastic.NewFetchSourceContext(true).Include("_id", "@timestamp")).
 			Size(1000)
 
 		msearchRequests = append(msearchRequests, SearchPayload{Temp: &temps[i], Req: req})
@@ -210,7 +210,6 @@ func main() {
 	var bulkDocuments []model.BulkDocument
 	for i, res := range resp.Responses {
 		temp := msearchRequests[i].Temp
-		date := temp.Date()
 
 		if res.Error != nil {
 			log.Warn().Any("error", res.Error).Msgf("skipping errored msearch result at index %d", i)
@@ -218,21 +217,29 @@ func main() {
 		}
 
 		for _, hit := range res.Hits.Hits {
-			// Get all days in the month
-			startOfMonth := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
-			endOfMonth := startOfMonth.AddDate(0, 1, -1)
-
-			for d := startOfMonth; !d.After(endOfMonth); d = d.AddDate(0, 0, 1) {
-				doc := model.BulkDocument{
-					Date:       &d,
-					BulkType:   model.BulkUpdate,
-					DocumentId: hit.Id,
-					Document: map[string]any{
-						"installed_capacity": temp.NewCapacityFloat(),
-					},
-				}
-				bulkDocuments = append(bulkDocuments, doc)
+			buf, err := hit.Source.MarshalJSON()
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to marshal hit source")
 			}
+
+			var doc map[string]any
+			if err := json.Unmarshal(buf, &doc); err != nil {
+				log.Fatal().Err(err).Msg("failed to unmarshal hit source")
+			}
+
+			date, err := time.Parse("2006-01-02T15:04:05.999999999Z", doc["@timestamp"].(string))
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to parse date")
+			}
+
+			bulkDocuments = append(bulkDocuments, model.BulkDocument{
+				Date:       &date,
+				BulkType:   model.BulkUpdate,
+				DocumentId: hit.Id,
+				Document: map[string]any{
+					"installed_capacity": temp.NewCapacityFloat(),
+				},
+			})
 		}
 	}
 
