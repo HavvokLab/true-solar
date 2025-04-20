@@ -232,8 +232,27 @@ func main() {
 				log.Fatal().Err(err).Msg("failed to parse date")
 			}
 
+			beforeDate := date.AddDate(0, 0, -1)
+			afterDate := date.AddDate(0, 0, 1)
+
 			bulkDocuments = append(bulkDocuments, model.BulkDocument{
 				Date:       &date,
+				BulkType:   model.BulkUpdate,
+				DocumentId: hit.Id,
+				Document: map[string]any{
+					"installed_capacity": temp.NewCapacityFloat(),
+				},
+			})
+			bulkDocuments = append(bulkDocuments, model.BulkDocument{
+				Date:       &beforeDate,
+				BulkType:   model.BulkUpdate,
+				DocumentId: hit.Id,
+				Document: map[string]any{
+					"installed_capacity": temp.NewCapacityFloat(),
+				},
+			})
+			bulkDocuments = append(bulkDocuments, model.BulkDocument{
+				Date:       &afterDate,
 				BulkType:   model.BulkUpdate,
 				DocumentId: hit.Id,
 				Document: map[string]any{
