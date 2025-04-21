@@ -1,0 +1,52 @@
+[
+  {
+    "date": "2024-04-19T00:00:00Z",
+    "bulk_type": "insert",
+    "document": {
+      "@timestamp": "2024-09-20T00:00:04.380568812Z",
+      "month": "09",
+      "year": "2024",
+      "month_year": "09-2024",
+      "vendor_type": "INVT",
+      "data_type": "PLANT",
+      "area": "BMA-02",
+      "site_id": "BKE8521",
+      "site_city_name": "",
+      "site_city_code": "BKE8521",
+      "node_type": "NB",
+      "ac_phase": 1,
+      "id": "63019514",
+      "name": "BKE8521-NB1P4",
+      "lat": 13.788768333333334,
+      "lng": 100.426045,
+      "location": "13.788768,100.426045",
+      "location_address": "แขวงฉิมพลี เขตตลิ่งชัน กรุงเทพมหานคร",
+      "created_date": "2024-09-03T05:28:23Z",
+      "installed_capacity": 4,
+      "total_co2": null,
+      "monthly_co2": null,
+      "total_saving_price": 0,
+      "currency": "THB",
+      "current_power": 0,
+      "total_production": null,
+      "daily_production": 0,
+      "monthly_production": 0,
+      "yearly_production": 0,
+      "plant_status": "OFFLINE",
+      "owner": "TRUE"
+    }
+  },
+  {
+    "date": "2024-04-19T00:00:00Z",
+    "bulk_type": "update",
+    "document_id": "existing_doc_123",
+    "document": {
+      "installed_capacity": 150.75
+    }
+  },
+  {
+    "date": "2024-04-19T00:00:00Z",
+    "bulk_type": "delete",
+    "document_id": "doc_to_delete_456"
+  }
+]
