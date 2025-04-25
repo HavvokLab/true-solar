@@ -44,8 +44,8 @@ func NewLumberjack(file string) io.Writer {
 	return &lumberjack.Logger{
 		Filename:   path,
 		MaxSize:    100,
-		MaxBackups: 3,
-		MaxAge:     7,
+		MaxBackups: 0,
+		MaxAge:     0,
 		Compress:   true,
 	}
 }
