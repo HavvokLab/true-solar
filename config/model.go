@@ -1,9 +1,29 @@
 package config
 
+import "time"
+
+// Performance alarm constants
+const (
+	LowPerformanceAlarm = "PerformanceLow"
+	SumPerformanceAlarm = "SumPerformanceLow"
+)
+
+const (
+	PerformanceAlarmSnmpBatchSize  = 25
+	PerformanceAlarmSnmpBatchDelay = 5 * time.Second
+)
+
+// Performance alarm type constants (enum values)
+const (
+	PerformanceAlarmTypePerformanceLow = iota + 1
+	PerformanceAlarmTypeSumPerformanceLow
+)
+
 type Config struct {
 	Elastic  ElasticsearchConfig `mapstructure:"elasticsearch"`
 	SnmpList []SnmpConfig        `mapstructure:"snmp_list"`
 	Redis    RedisConfig         `mapstructure:"redis"`
+	Crontab  CrontabConfig       `mapstructure:"crontab"`
 }
 
 type ElasticsearchConfig struct {
@@ -24,4 +44,11 @@ type RedisConfig struct {
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+}
+
+type CrontabConfig struct {
+	CollectTime             string `mapstructure:"collect_time"`
+	AlarmTime               string `mapstructure:"alarm_time"`
+	LowPerformanceAlarmTime string `mapstructure:"low_performance_alarm_time"`
+	SumPerformanceAlarmTime string `mapstructure:"sum_performance_alarm_time"`
 }

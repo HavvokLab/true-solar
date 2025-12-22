@@ -10,7 +10,6 @@ import (
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
-	"github.com/HavvokLab/true-solar/setting"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -57,7 +56,6 @@ func registerJobs(cron *gocron.Scheduler) error {
 		scheduleHuaweiJobs,
 		scheduleHuawei2Jobs,
 		scheduleSolarmanJobs,
-		scheduleClearJobs,
 		schedulePerformanceJobs,
 	}
 
@@ -71,19 +69,14 @@ func registerJobs(cron *gocron.Scheduler) error {
 }
 
 func scheduleGrowattJobs(cron *gocron.Scheduler) error {
-	if err := addCronJob(cron, setting.CrontabCollectDayTime, "growatt_collect_day", growattJobLogger, func() error {
+	cfg := config.GetConfig()
+	if err := addCronJob(cron, cfg.Crontab.CollectTime, "growatt_collect", growattJobLogger, func() error {
 		return runGrowattCollect(growattJobLogger)
 	}); err != nil {
 		return err
 	}
 
-	if err := addCronJob(cron, setting.CrontabCollectNightTime, "growatt_collect_night", growattJobLogger, func() error {
-		return runGrowattCollect(growattJobLogger)
-	}); err != nil {
-		return err
-	}
-
-	if err := addCronJob(cron, setting.CrontabAlarmTime, "growatt_alarm", growattJobLogger, func() error {
+	if err := addCronJob(cron, cfg.Crontab.AlarmTime, "growatt_alarm", growattJobLogger, func() error {
 		return runGrowattAlarm(growattJobLogger)
 	}); err != nil {
 		return err
@@ -93,19 +86,14 @@ func scheduleGrowattJobs(cron *gocron.Scheduler) error {
 }
 
 func scheduleKstarJobs(cron *gocron.Scheduler) error {
-	if err := addCronJob(cron, setting.CrontabCollectDayTime, "kstar_collect_day", kstarJobLogger, func() error {
+	cfg := config.GetConfig()
+	if err := addCronJob(cron, cfg.Crontab.CollectTime, "kstar_collect", kstarJobLogger, func() error {
 		return runKstarCollect(kstarJobLogger)
 	}); err != nil {
 		return err
 	}
 
-	if err := addCronJob(cron, setting.CrontabCollectNightTime, "kstar_collect_night", kstarJobLogger, func() error {
-		return runKstarCollect(kstarJobLogger)
-	}); err != nil {
-		return err
-	}
-
-	if err := addCronJob(cron, setting.CrontabAlarmTime, "kstar_alarm", kstarJobLogger, func() error {
+	if err := addCronJob(cron, cfg.Crontab.AlarmTime, "kstar_alarm", kstarJobLogger, func() error {
 		return runKstarAlarm(kstarJobLogger)
 	}); err != nil {
 		return err
@@ -115,19 +103,14 @@ func scheduleKstarJobs(cron *gocron.Scheduler) error {
 }
 
 func scheduleHuaweiJobs(cron *gocron.Scheduler) error {
-	if err := addCronJob(cron, setting.CrontabCollectDayTime, "huawei_collect_day", huaweiJobLogger, func() error {
+	cfg := config.GetConfig()
+	if err := addCronJob(cron, cfg.Crontab.CollectTime, "huawei_collect", huaweiJobLogger, func() error {
 		return runHuaweiCollect(huaweiJobLogger)
 	}); err != nil {
 		return err
 	}
 
-	if err := addCronJob(cron, setting.CrontabCollectNightTime, "huawei_collect_night", huaweiJobLogger, func() error {
-		return runHuaweiCollect(huaweiJobLogger)
-	}); err != nil {
-		return err
-	}
-
-	if err := addCronJob(cron, setting.CrontabAlarmTime, "huawei_alarm", huaweiJobLogger, func() error {
+	if err := addCronJob(cron, cfg.Crontab.AlarmTime, "huawei_alarm", huaweiJobLogger, func() error {
 		return runHuaweiAlarm(huaweiJobLogger)
 	}); err != nil {
 		return err
@@ -137,13 +120,8 @@ func scheduleHuaweiJobs(cron *gocron.Scheduler) error {
 }
 
 func scheduleHuawei2Jobs(cron *gocron.Scheduler) error {
-	if err := addCronJob(cron, setting.CrontabHuawei2DayTime, "huawei2_collect_day", huawei2JobLogger, func() error {
-		return runHuawei2Collect(huawei2JobLogger)
-	}); err != nil {
-		return err
-	}
-
-	if err := addCronJob(cron, setting.CrontabHuawei2NightTime, "huawei2_collect_night", huawei2JobLogger, func() error {
+	cfg := config.GetConfig()
+	if err := addCronJob(cron, cfg.Crontab.CollectTime, "huawei2_collect", huawei2JobLogger, func() error {
 		return runHuawei2Collect(huawei2JobLogger)
 	}); err != nil {
 		return err
@@ -153,19 +131,14 @@ func scheduleHuawei2Jobs(cron *gocron.Scheduler) error {
 }
 
 func scheduleSolarmanJobs(cron *gocron.Scheduler) error {
-	if err := addCronJob(cron, setting.CrontabSolarmanCollectDayTime, "solarman_collect_day", solarmanJobLogger, func() error {
+	cfg := config.GetConfig()
+	if err := addCronJob(cron, cfg.Crontab.CollectTime, "solarman_collect", solarmanJobLogger, func() error {
 		return runSolarmanCollect(solarmanJobLogger)
 	}); err != nil {
 		return err
 	}
 
-	if err := addCronJob(cron, setting.CrontabSolarmanCollectNightTime, "solarman_collect_night", solarmanJobLogger, func() error {
-		return runSolarmanCollect(solarmanJobLogger)
-	}); err != nil {
-		return err
-	}
-
-	if err := addCronJob(cron, setting.CrontabAlarmTime, "solarman_alarm", solarmanJobLogger, func() error {
+	if err := addCronJob(cron, cfg.Crontab.AlarmTime, "solarman_alarm", solarmanJobLogger, func() error {
 		return runSolarmanAlarm(solarmanJobLogger)
 	}); err != nil {
 		return err
@@ -174,20 +147,15 @@ func scheduleSolarmanJobs(cron *gocron.Scheduler) error {
 	return nil
 }
 
-func scheduleClearJobs(cron *gocron.Scheduler) error {
-	return addCronJob(cron, setting.CrontabClearPerformanceAlarmTime, "clear_performance_alarm", clearAlarmJobLogger, func() error {
-		return runClearPerformanceAlarm(clearAlarmJobLogger)
-	})
-}
-
 func schedulePerformanceJobs(cron *gocron.Scheduler) error {
-	if err := addCronJob(cron, setting.CrontabLowPerformanceAlarmTime, "low_performance_alarm", performanceJobLogger, func() error {
+	cfg := config.GetConfig()
+	if err := addCronJob(cron, cfg.Crontab.LowPerformanceAlarmTime, "low_performance_alarm", performanceJobLogger, func() error {
 		return runLowPerformanceAlarm(performanceJobLogger)
 	}); err != nil {
 		return err
 	}
 
-	if err := addCronJob(cron, setting.CrontabSumPerformanceAlarmTime, "sum_performance_alarm", performanceJobLogger, func() error {
+	if err := addCronJob(cron, cfg.Crontab.SumPerformanceAlarmTime, "sum_performance_alarm", performanceJobLogger, func() error {
 		return runSumPerformanceAlarm(performanceJobLogger)
 	}); err != nil {
 		return err

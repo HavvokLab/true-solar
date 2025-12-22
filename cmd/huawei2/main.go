@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/HavvokLab/true-solar/collector"
+	"github.com/HavvokLab/true-solar/config"
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
-	"github.com/HavvokLab/true-solar/setting"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog/log"
 	"github.com/sourcegraph/conc"
@@ -22,9 +22,9 @@ func init() {
 }
 
 func main() {
+	cfg := config.GetConfig()
 	cron := gocron.NewScheduler(time.Local)
-	cron.Cron(setting.CrontabHuawei2DayTime).Do(collect)
-	cron.Cron(setting.CrontabHuawei2NightTime).Do(collect)
+	cron.Cron(cfg.Crontab.CollectTime).Do(collect)
 	cron.StartBlocking()
 }
 

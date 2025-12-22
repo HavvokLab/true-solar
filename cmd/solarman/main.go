@@ -9,7 +9,6 @@ import (
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
-	"github.com/HavvokLab/true-solar/setting"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog/log"
 	"github.com/sourcegraph/conc"
@@ -22,10 +21,10 @@ func init() {
 }
 
 func main() {
+	cfg := config.GetConfig()
 	cron := gocron.NewScheduler(time.Local)
-	cron.Cron(setting.CrontabSolarmanCollectDayTime).Do(collect)
-	cron.Cron(setting.CrontabSolarmanCollectNightTime).Do(collect)
-	cron.Cron(setting.CrontabAlarmTime).Do(runAlarm)
+	cron.Cron(cfg.Crontab.CollectTime).Do(collect)
+	cron.Cron(cfg.Crontab.AlarmTime).Do(runAlarm)
 	cron.StartBlocking()
 }
 

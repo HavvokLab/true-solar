@@ -1,8 +1,8 @@
 package repo
 
 import (
+	"github.com/HavvokLab/true-solar/config"
 	"github.com/HavvokLab/true-solar/model"
-	"github.com/HavvokLab/true-solar/setting"
 	"gorm.io/gorm"
 )
 
@@ -24,7 +24,7 @@ func NewPerformanceAlarmConfigRepo(db *gorm.DB) PerformanceAlarmConfigRepo {
 func (r *performanceAlarmConfigRepo) GetLowPerformanceAlarmConfig() (*model.PerformanceAlarmConfig, error) {
 	tx := r.db.Session(&gorm.Session{})
 	data := model.PerformanceAlarmConfig{}
-	if err := tx.Find(&data, "name = ?", setting.LowPerformanceAlarm).Error; err != nil {
+	if err := tx.Find(&data, "name = ?", config.LowPerformanceAlarm).Error; err != nil {
 		return nil, err
 	}
 
@@ -34,7 +34,7 @@ func (r *performanceAlarmConfigRepo) GetLowPerformanceAlarmConfig() (*model.Perf
 func (r *performanceAlarmConfigRepo) GetSumPerformanceAlarmConfig() (*model.PerformanceAlarmConfig, error) {
 	tx := r.db.Session(&gorm.Session{})
 	data := model.PerformanceAlarmConfig{}
-	if err := tx.Find(&data, "name = ?", setting.SumPerformanceAlarm).Error; err != nil {
+	if err := tx.Find(&data, "name = ?", config.SumPerformanceAlarm).Error; err != nil {
 		return nil, err
 	}
 

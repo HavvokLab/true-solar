@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
+	appconfig "github.com/HavvokLab/true-solar/config"
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/model"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/pkg/util"
 	"github.com/HavvokLab/true-solar/repo"
-	"github.com/HavvokLab/true-solar/setting"
 	"github.com/rs/zerolog"
 	"go.openly.dev/pointy"
 )
@@ -135,7 +135,7 @@ func (p SumPerformanceAlarm) Run() error {
 	var failedAlarmCount int
 	documents := make([]any, 0)
 	if len(filteredBuckets) > 0 {
-		bucketBatches := p.chunkBy(filteredBuckets, setting.PerformanceAlarmSnmpBatchSize)
+		bucketBatches := p.chunkBy(filteredBuckets, appconfig.PerformanceAlarmSnmpBatchSize)
 
 		var batchAlarmCount int
 		var failedBatchAlarmCount int
@@ -149,7 +149,7 @@ func (p SumPerformanceAlarm) Run() error {
 						if totalProduction, ok := data["totalProduction"].(float64); ok {
 							threshold := installedCapacity * efficiencyFactor * float64(focusHour) * float64(duration) * percentage
 							if totalProduction <= threshold {
-								plantName, alarmName, payload, severity, err := p.buildPayload(setting.PerformanceAlarmTypeSumPerformanceLow, config, installedCapacityConfig, data)
+								plantName, alarmName, payload, severity, err := p.buildPayload(appconfig.PerformanceAlarmTypeSumPerformanceLow, config, installedCapacityConfig, data)
 								if err != nil {
 									p.logger.Error().Err(err).Msg("SumPerformanceAlarm::Run() - failed to build payload")
 									continue
@@ -168,8 +168,8 @@ func (p SumPerformanceAlarm) Run() error {
 
 			p.logger.Info().Int("batch", i+1).Int("alarm_count", batchAlarmCount).Msg("batch completed to send alarms")
 			p.logger.Info().Int("batch", i+1).Int("failed_alarm_count", failedBatchAlarmCount).Msg("batch failed to send alarms")
-			p.logger.Info().Int("batch", i+1).Str("delay", setting.PerformanceAlarmSnmpBatchDelay.String()).Msg("batch sleeping for delay")
-			time.Sleep(setting.PerformanceAlarmSnmpBatchDelay)
+			p.logger.Info().Int("batch", i+1).Str("delay", appconfig.PerformanceAlarmSnmpBatchDelay.String()).Msg("batch sleeping for delay")
+			time.Sleep(appconfig.PerformanceAlarmSnmpBatchDelay)
 		}
 
 		p.logger.Info().Int("alarm_count", alarmCount).Msg("completed to send alarms")
@@ -240,7 +240,7 @@ func (s *SumPerformanceAlarm) chunkBy(items map[string]map[string]interface{}, c
 }
 
 func (p SumPerformanceAlarm) buildPayload(alarmType int, config *model.PerformanceAlarmConfig, installedCapacity *model.InstalledCapacity, data map[string]any) (string, string, string, string, error) {
-	if alarmType != setting.PerformanceAlarmTypePerformanceLow && alarmType != setting.PerformanceAlarmTypeSumPerformanceLow {
+	if alarmType != appconfig.PerformanceAlarmTypePerformanceLow && alarmType != appconfig.PerformanceAlarmTypeSumPerformanceLow {
 		return "", "", "", "", errors.New("invalid alarm type")
 	}
 
@@ -285,7 +285,7 @@ func (p SumPerformanceAlarm) buildPayload(alarmType int, config *model.Performan
 	hitDay := pointy.IntValue(config.HitDay, 0)
 	multipliedCapacity := capacity * installedCapacity.EfficiencyFactor * float64(installedCapacity.FocusHour)
 
-	if alarmType == setting.PerformanceAlarmTypePerformanceLow {
+	if alarmType == appconfig.PerformanceAlarmTypePerformanceLow {
 		payload := fmt.Sprintf("%s, %s, Less than or equal %.2f%%, Expected Daily Production:%.2f KWH, Actual Production less than:%.2f KWH, Duration:%d days, Period:%s",
 			vendorName, alarmNameInDescription, config.Percentage, multipliedCapacity, multipliedCapacity*(config.Percentage/100.0), hitDay, period)
 		return plantName, alarmName, payload, severity, nil

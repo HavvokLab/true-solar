@@ -8,7 +8,6 @@ import (
 	"github.com/HavvokLab/true-solar/infra"
 	"github.com/HavvokLab/true-solar/pkg/logger"
 	"github.com/HavvokLab/true-solar/repo"
-	"github.com/HavvokLab/true-solar/setting"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog/log"
 )
@@ -25,9 +24,10 @@ func init() {
 }
 
 func main() {
+	cfg := config.GetConfig()
 	cron := gocron.NewScheduler(time.Local)
-	cron.Cron(setting.CrontabLowPerformanceAlarmTime).Do(lowPerformanceAlarm)
-	cron.Cron(setting.CrontabSumPerformanceAlarmTime).Do(sumPerformanceAlarm)
+	cron.Cron(cfg.Crontab.LowPerformanceAlarmTime).Do(lowPerformanceAlarm)
+	cron.Cron(cfg.Crontab.SumPerformanceAlarmTime).Do(sumPerformanceAlarm)
 	cron.StartBlocking()
 }
 
