@@ -165,7 +165,7 @@ func schedulePerformanceJobs(cron *gocron.Scheduler) error {
 }
 
 func addCronJob(cron *gocron.Scheduler, cronExpr, name string, jobLogger zerolog.Logger, fn func() error) error {
-	if _, err := cron.Cron(cronExpr).Do(func() {
+	if _, err := cron.Cron(cronExpr).StartImmediately().SingletonMode().Do(func() {
 		safeRun(jobLogger, name, fn)
 	}); err != nil {
 		return fmt.Errorf("failed to schedule %s: %w", name, err)

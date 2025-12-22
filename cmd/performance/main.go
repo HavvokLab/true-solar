@@ -26,8 +26,8 @@ func init() {
 func main() {
 	cfg := config.GetConfig()
 	cron := gocron.NewScheduler(time.Local)
-	cron.Cron(cfg.Crontab.LowPerformanceAlarmTime).Do(lowPerformanceAlarm)
-	cron.Cron(cfg.Crontab.SumPerformanceAlarmTime).Do(sumPerformanceAlarm)
+	cron.Cron(cfg.Crontab.LowPerformanceAlarmTime).StartImmediately().SingletonMode().Do(lowPerformanceAlarm)
+	cron.Cron(cfg.Crontab.SumPerformanceAlarmTime).StartImmediately().SingletonMode().Do(sumPerformanceAlarm)
 	cron.StartBlocking()
 }
 
