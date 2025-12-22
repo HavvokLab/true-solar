@@ -19,6 +19,21 @@ const (
 	PerformanceAlarmTypeSumPerformanceLow
 )
 
+// Fallback config values for performance alarms (based on database defaults)
+const (
+	// LowPerformanceAlarm fallback values
+	LowPerformanceAlarmInterval   = 24
+	LowPerformanceAlarmHitDay     = 5
+	LowPerformanceAlarmPercentage = 60.0
+	LowPerformanceAlarmDuration   = 7
+
+	// SumPerformanceAlarm fallback values
+	SumPerformanceAlarmInterval   = 24
+	SumPerformanceAlarmHitDay     = 5 // Default since DB has NULL
+	SumPerformanceAlarmPercentage = 50.0
+	SumPerformanceAlarmDuration   = 30
+)
+
 type Config struct {
 	Elastic  ElasticsearchConfig `mapstructure:"elasticsearch"`
 	SnmpList []SnmpConfig        `mapstructure:"snmp_list"`

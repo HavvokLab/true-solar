@@ -189,13 +189,34 @@ func (p SumPerformanceAlarm) Run() error {
 func (s *SumPerformanceAlarm) getConfig() (*model.PerformanceAlarmConfig, error) {
 	config, err := s.performanceAlarmConfigRepo.GetSumPerformanceAlarmConfig()
 	if err != nil {
+		s.logger.Error().Err(err).Msg("SumPerformanceAlarm::getConfig() - failed to get config from repo")
 		return nil, err
 	}
 
 	if config == nil {
 		err := errors.New("performance alarm config not found")
+		s.logger.Error().Msg("SumPerformanceAlarm::getConfig() - config is nil")
 		return nil, err
 	}
+
+	// Apply fallback values for nil fields
+	if config.HitDay == nil {
+		s.logger.Warn().Int("fallback_hit_day", appconfig.SumPerformanceAlarmHitDay).Msg("SumPerformanceAlarm::getConfig() - using fallback hit_day")
+		config.HitDay = pointy.Int(appconfig.SumPerformanceAlarmHitDay)
+	}
+
+	if config.Duration == nil {
+		s.logger.Warn().Int("fallback_duration", appconfig.SumPerformanceAlarmDuration).Msg("SumPerformanceAlarm::getConfig() - using fallback duration")
+		config.Duration = pointy.Int(appconfig.SumPerformanceAlarmDuration)
+	}
+
+	s.logger.Info().
+		Int64("id", config.ID).
+		Str("name", config.Name).
+		Int("hit_day", pointy.IntValue(config.HitDay, 0)).
+		Int("duration", pointy.IntValue(config.Duration, 0)).
+		Float64("percentage", config.Percentage).
+		Msg("SumPerformanceAlarm::getConfig() - loaded config")
 
 	if pointy.IntValue(config.HitDay, 0) == 0 {
 		err := errors.New("hit day must not be zero value")

@@ -181,13 +181,34 @@ func (p LowPerformanceAlarm) Run() error {
 func (s *LowPerformanceAlarm) getConfig() (*model.PerformanceAlarmConfig, error) {
 	config, err := s.performanceAlarmConfigRepo.GetLowPerformanceAlarmConfig()
 	if err != nil {
+		s.logger.Error().Err(err).Msg("LowPerformanceAlarm::getConfig() - failed to get config from repo")
 		return nil, err
 	}
 
 	if config == nil {
 		err := errors.New("performance alarm config not found")
+		s.logger.Error().Msg("LowPerformanceAlarm::getConfig() - config is nil")
 		return nil, err
 	}
+
+	// Apply fallback values for nil fields
+	if config.HitDay == nil {
+		s.logger.Warn().Int("fallback_hit_day", appconfig.LowPerformanceAlarmHitDay).Msg("LowPerformanceAlarm::getConfig() - using fallback hit_day")
+		config.HitDay = pointy.Int(appconfig.LowPerformanceAlarmHitDay)
+	}
+
+	if config.Duration == nil {
+		s.logger.Warn().Int("fallback_duration", appconfig.LowPerformanceAlarmDuration).Msg("LowPerformanceAlarm::getConfig() - using fallback duration")
+		config.Duration = pointy.Int(appconfig.LowPerformanceAlarmDuration)
+	}
+
+	s.logger.Info().
+		Int64("id", config.ID).
+		Str("name", config.Name).
+		Int("hit_day", pointy.IntValue(config.HitDay, 0)).
+		Int("duration", pointy.IntValue(config.Duration, 0)).
+		Float64("percentage", config.Percentage).
+		Msg("LowPerformanceAlarm::getConfig() - loaded config")
 
 	if pointy.IntValue(config.HitDay, 0) == 0 {
 		err := errors.New("hit day must not be zero value")
