@@ -78,7 +78,7 @@ DONE:
 		}
 	}
 
-	collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, time.Now().Format("2006.01.02"))
+	collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, date.Format("2006.01.02"))
 	if err := g.solarRepo.BulkIndex(collectorIndex, documents); err != nil {
 		g.logger.Error().Err(err).Msg("GrowattTroubleshoot::Execute() - failed to bulk index documents")
 		return

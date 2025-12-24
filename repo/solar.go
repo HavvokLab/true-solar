@@ -5,9 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/HavvokLab/true-solar/model"
 	"github.com/olivere/elastic/v7"
+)
+
+// Elasticsearch timeout constants
+const (
+	// DefaultESTimeout is used for standard queries and bulk operations
+	DefaultESTimeout = 30 * time.Second
+	// ScrollESTimeout is used for scroll operations that may take longer
+	ScrollESTimeout = 5 * time.Minute
+	// ScrollKeepAlive is the server-side scroll context keepalive duration
+	ScrollKeepAlive = "2m"
 )
 
 type SolarRepo interface {
@@ -35,7 +46,9 @@ func (r *solarRepo) SearchIndex() *elastic.SearchService {
 }
 
 func (r *solarRepo) CreateIndexIfNotExist(index string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultESTimeout)
+	defer cancel()
+
 	if exist, err := r.elastic.IndexExists(index).Do(ctx); err != nil {
 		if !exist {
 			result, err := r.elastic.CreateIndex(index).Do(ctx)
@@ -63,7 +76,9 @@ func (r *solarRepo) BulkIndex(index string, docs []interface{}) error {
 		bulk.Add(elastic.NewBulkIndexRequest().Index(index).Doc(doc))
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultESTimeout)
+	defer cancel()
+
 	if _, err := bulk.Do(ctx); err != nil {
 		return err
 	}
@@ -83,7 +98,10 @@ func (r *solarRepo) UpsertSiteStation(docs []model.SiteItem) error {
 		bulk.Add(elastic.NewBulkUpdateRequest().Index(index).Id(doc.SiteID).Doc(doc).DocAsUpsert(true))
 	}
 
-	_, err = bulk.Do(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultESTimeout)
+	defer cancel()
+
+	_, err = bulk.Do(ctx)
 	if err != nil {
 		return err
 	}
@@ -92,7 +110,9 @@ func (r *solarRepo) UpsertSiteStation(docs []model.SiteItem) error {
 }
 
 func (r *solarRepo) GetPerformanceLow(duration int, efficiencyFactor float64, focusHour int, thresholdPct float64) ([]*elastic.AggregationBucketCompositeItem, error) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), ScrollESTimeout)
+	defer cancel()
+
 	compositeAggregation := elastic.NewCompositeAggregation().
 		Size(10000).
 		Sources(elastic.NewCompositeAggregationDateHistogramValuesSource("date").Field("@timestamp").CalendarInterval("day").Format("yyyy-MM-dd"),
@@ -183,7 +203,9 @@ func (r *solarRepo) GetPerformanceLow(duration int, efficiencyFactor float64, fo
 }
 
 func (r *solarRepo) GetSumPerformanceLow(duration int) ([]*elastic.AggregationBucketCompositeItem, error) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), ScrollESTimeout)
+	defer cancel()
+
 	items := make([]*elastic.AggregationBucketCompositeItem, 0)
 
 	compositeAggregation := elastic.NewCompositeAggregation().
@@ -265,7 +287,9 @@ func (r *solarRepo) GetSumPerformanceLow(duration int) ([]*elastic.AggregationBu
 }
 
 func (r *solarRepo) GetUniquePlantByIndex(index string) ([]*elastic.AggregationBucketKeyItem, error) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultESTimeout)
+	defer cancel()
+
 	termAggregation := elastic.NewTermsAggregation().
 		Field("name.keyword").
 		Size(10000)
@@ -307,14 +331,32 @@ func (r *solarRepo) GetUniquePlantByIndex(index string) ([]*elastic.AggregationB
 }
 
 func (r *solarRepo) GetPerformanceAlarm(index string) ([]*model.SnmpPerformanceAlarmItem, error) {
-	ctx := context.Background()
-	scroll := r.elastic.Scroll(index).Size(1000).Scroll("2m")
+	ctx, cancel := context.WithTimeout(context.Background(), ScrollESTimeout)
+	defer cancel()
+
+	scroll := r.elastic.Scroll(index).Size(1000).Scroll(ScrollKeepAlive)
+	var scrollID string
+
+	// Ensure scroll context is cleared to release server resources
+	defer func() {
+		if scrollID != "" {
+			// Use background context for cleanup since main context may be cancelled
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cleanupCancel()
+			_, _ = r.elastic.ClearScroll(scrollID).Do(cleanupCtx)
+		}
+	}()
 
 	items := make([]*model.SnmpPerformanceAlarmItem, 0)
 	for {
 		results, err := scroll.Do(ctx)
 		if err != nil {
 			break
+		}
+
+		// Track scroll ID for cleanup
+		if results.ScrollId != "" {
+			scrollID = results.ScrollId
 		}
 
 		for _, hit := range results.Hits.Hits {

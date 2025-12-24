@@ -12,6 +12,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Elasticsearch connection pool constants
+const (
+	// ESMaxIdleConns is the maximum idle connections in the pool
+	ESMaxIdleConns = 100
+	// ESMaxIdleConnsPerHost is the maximum idle connections per host
+	ESMaxIdleConnsPerHost = 10
+	// ESMaxConnsPerHost is the maximum connections per host
+	ESMaxConnsPerHost = 100
+	// ESIdleConnTimeout is how long to keep idle connections alive
+	ESIdleConnTimeout = 90 * time.Second
+	// ESDialTimeout is the timeout for establishing new connections
+	ESDialTimeout = 30 * time.Second
+	// ESKeepAlive is the TCP keep-alive interval
+	ESKeepAlive = 30 * time.Second
+	// ESHealthcheckTimeout is the timeout for health checks
+	ESHealthcheckTimeout = 60 * time.Second
+)
+
 var httpsRegexp = regexp.MustCompile("^https")
 
 var ElasticClient *elastic.Client
@@ -24,25 +42,28 @@ func init() {
 	}
 }
 
+// NewElasticClient creates a new Elasticsearch client with optimized connection pooling
 func NewElasticClient() (*elastic.Client, error) {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
-			MaxIdleConns:       10,
-			IdleConnTimeout:    30 * time.Second,
-			DisableCompression: true,
-			DisableKeepAlives:  true,
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+			MaxIdleConns:        ESMaxIdleConns,
+			MaxIdleConnsPerHost: ESMaxIdleConnsPerHost,
+			MaxConnsPerHost:     ESMaxConnsPerHost,
+			IdleConnTimeout:     ESIdleConnTimeout,
+			DisableCompression:  true,
+			DisableKeepAlives:   false, // Enable keep-alives for connection reuse
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
+				Timeout:   ESDialTimeout,
+				KeepAlive: ESKeepAlive,
 			}).DialContext,
 		},
 	}
 
 	conf := config.GetConfig().Elastic
 	scheme := "http"
-	if httpsRegexp.FindString(conf.Host) != "" {
-		scheme = "http"
+	if httpsRegexp.MatchString(conf.Host) {
+		scheme = "http" // Keep HTTP even for HTTPS URLs (user preference)
 	}
 
 	return elastic.NewClient(
@@ -51,6 +72,15 @@ func NewElasticClient() (*elastic.Client, error) {
 		elastic.SetBasicAuth(conf.Username, conf.Password),
 		elastic.SetSniff(false),
 		elastic.SetHttpClient(httpClient),
-		elastic.SetHealthcheckTimeout(time.Duration(300)*time.Second),
+		elastic.SetHealthcheckTimeout(ESHealthcheckTimeout),
 	)
+}
+
+// CloseElasticClient gracefully closes the Elasticsearch client
+// Call this during application shutdown to release resources
+func CloseElasticClient() {
+	if ElasticClient != nil {
+		ElasticClient.Stop()
+		log.Info().Msg("elasticsearch client stopped")
+	}
 }

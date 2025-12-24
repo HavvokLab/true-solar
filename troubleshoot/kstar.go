@@ -76,7 +76,7 @@ DONE:
 		}
 	}
 
-	collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, time.Now().Format("2006.01.02"))
+	collectorIndex := fmt.Sprintf("%s-%s", model.SolarIndex, date.Format("2006.01.02"))
 	if err := k.solarRepo.BulkIndex(collectorIndex, documents); err != nil {
 		k.logger.Error().Err(err).Msg("KstarTroubleshoot::Execute() - failed to bulk index documents")
 		return
