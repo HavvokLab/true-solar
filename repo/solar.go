@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/HavvokLab/true-solar/model"
@@ -19,7 +20,23 @@ const (
 	ScrollESTimeout = 5 * time.Minute
 	// ScrollKeepAlive is the server-side scroll context keepalive duration
 	ScrollKeepAlive = "2m"
+	// MaxRetryAttempts for connection errors like port exhaustion
+	MaxRetryAttempts = 3
+	// BaseRetryDelay is the base delay for exponential backoff
+	BaseRetryDelay = 2 * time.Second
 )
+
+// isRetryableError checks if the error is a connection error that can be retried
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "cannot assign requested address") ||
+		strings.Contains(errStr, "connection reset") ||
+		strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "i/o timeout")
+}
 
 type SolarRepo interface {
 	BulkIndex(index string, docs []interface{}) error
@@ -76,14 +93,28 @@ func (r *solarRepo) BulkIndex(index string, docs []interface{}) error {
 		bulk.Add(elastic.NewBulkIndexRequest().Index(index).Doc(doc))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultESTimeout)
-	defer cancel()
+	var lastErr error
+	for attempt := 0; attempt <= MaxRetryAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultESTimeout)
+		_, lastErr = bulk.Do(ctx)
+		cancel()
 
-	if _, err := bulk.Do(ctx); err != nil {
-		return err
+		if lastErr == nil {
+			return nil
+		}
+
+		// Only retry on connection errors like port exhaustion
+		if !isRetryableError(lastErr) {
+			return lastErr
+		}
+
+		// Exponential backoff: 2s, 4s, 8s
+		if attempt < MaxRetryAttempts {
+			time.Sleep(BaseRetryDelay * time.Duration(1<<attempt))
+		}
 	}
 
-	return nil
+	return lastErr
 }
 
 func (r *solarRepo) UpsertSiteStation(docs []model.SiteItem) error {
